@@ -1,4 +1,6 @@
-{
+import 'dotenv/config';
+
+export default {
   "expo": {
     "name": "liftfit-app",
     "slug": "liftfit-app",
@@ -8,6 +10,10 @@
     "scheme": "liftfitapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    extra: {
+      supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
+      supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
+    },
     "ios": {
       "supportsTablet": true
     },
