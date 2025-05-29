@@ -1,6 +1,11 @@
 import 'dotenv/config';
 
-export default {
+export default ({config}) => ({
+  ...config,
+  extra: {
+      supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
+      supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
+    },
   "expo": {
     "name": "liftfit-app",
     "slug": "liftfit-app",
@@ -10,31 +15,31 @@ export default {
     "scheme": "liftfitapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    extra: {
-      supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
-      supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
-    },
     "ios": {
+      "bundleIdentifier": "com.anonymous.liftfitapp",
       "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "foregroundImage": "./assets/logos/icon-512.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.anonymous.liftfitapp"
     },
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/logos/icon-512.png",
+      "name": "LiftFit - Fitness Wear",
+      "shortName": "LiftFit",
     },
     "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/logos/icon-512.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
@@ -45,4 +50,4 @@ export default {
       "typedRoutes": true
     }
   }
-}
+})
