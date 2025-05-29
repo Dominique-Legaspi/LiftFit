@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Dimensions, FlatList, Image, Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Dimensions, FlatList, Image, Platform, Pressable, RefreshControl, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Colors } from '@/constants/Colors';
 import { Fonts } from '@/constants/Fonts';
 import { useEffect, useRef, useState } from 'react';
@@ -23,43 +23,64 @@ type Category = {
 };
 
 export default function HomeScreen() {
-  const [searchActive, setSearchActive] = useState(false);
+  const [refreshing, setRefreshing] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(false);
+
+  const [searchActive, setSearchActive] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   const [newsPost, setNewsPost] = useState<News[]>([]);
+  const [shouldAutoScroll, setShouldAutoScroll] = useState<boolean>(true);
+
   const [shoppingCategories, setShoppingCategories] = useState<Category[]>([]);
 
   async function fetchNews() {
-    const { data, error } = await supabase
-      .from('news')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(5);
+    try {
+      const { data, error } = await supabase
+        .from('news')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(5);
 
-    if (error) {
-      console.error('Error fetching news posts:', error);
-      return;
+      if (error) throw error;
+
+      setNewsPost(data);
+    } catch (err) {
+      console.error('Error fetching news posts:', err);
     }
-
-    setNewsPost(data);
   }
 
   async function fetchShoppingCategories() {
-    const { data, error } = await supabase
-      .from('product_categories')
-      .select('*');
+    try {
+      const { data, error } = await supabase
+        .from('product_categories')
+        .select('*');
 
-    if (error) {
-      console.error('Error fetching product categories:', error);
-      return;
+      if (error) throw error;
+
+      setShoppingCategories(data);
+    } catch (err) {
+      console.error('Error fetching product categories:', err);
     }
+  }
 
-    setShoppingCategories(data);
+  async function loadData() {
+    try {
+      setLoading(true);
+      await Promise.all([fetchNews(), fetchShoppingCategories()]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function onRefresh() {
+    setRefreshing(true);
+    await Promise.all([fetchNews(), fetchShoppingCategories()]);
+    setRefreshing(false);
   }
 
   useEffect(() => {
-    fetchNews();
-    fetchShoppingCategories();
+    loadData();
   }, []);
 
   // allow flatlist to auto scroll
@@ -68,6 +89,8 @@ export default function HomeScreen() {
   const scrollX = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    if (!shouldAutoScroll || newsPost.length === 0) return;
+
     const interval = setInterval(() => {
       if (!flatListRef.current) return;
 
@@ -85,11 +108,60 @@ export default function HomeScreen() {
 
     // clean up
     return () => clearInterval(interval);
-  }, [newsPost])
+  }, [newsPost, shouldAutoScroll])
+
+  // resume auto scroll
+  let timeout: ReturnType<typeof setTimeout>;
+  const handleTouchEnd = () => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => {
+      setShouldAutoScroll(true)
+    }, 10000); // resume after 10 seconds
+  };
+
+  // loading spinner
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={Colors.light.blue} />
+      </View>
+    )
+  }
+
+
+  // test
+
+  const hottestStyles = [
+    {
+      id: 1,
+      name: "Titanium Compression Shirt",
+      image_url: "https://lmreplnzixefnbzgwdxr.supabase.co/storage/v1/object/public/product-images//Titanium%20Compression%20Shirt.png",
+    },
+    {
+      id: 2,
+      name: "Titanium Compression Shorts",
+      image_url: "https://lmreplnzixefnbzgwdxr.supabase.co/storage/v1/object/public/product-images//Titanium%20Compression%20Shorts.png",
+    },
+    {
+      id: 3,
+      name: "Titanium Compression Tank",
+      image_url: "https://lmreplnzixefnbzgwdxr.supabase.co/storage/v1/object/public/product-images//Titanium%20Compression%20Tank.png",
+    }
+  ];
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollViewContainer}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        style={[styles.scrollViewContainer, { marginBottom: 60 }]}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={Colors.light.blue}
+          />
+        }
+      >
 
         {/* title */}
         <View style={styles.topBar}>
@@ -143,9 +215,15 @@ export default function HomeScreen() {
         )}
 
         {/* news cards */}
-        <Text style={styles.sectionTitle}>
-          What's New
-        </Text>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>
+            What's New
+          </Text>
+          <Text style={styles.sectionLink}>
+            View all <Ionicons name="chevron-forward" />
+          </Text>
+        </View>
+
         <Animated.FlatList
           ref={flatListRef}
           horizontal
@@ -159,6 +237,9 @@ export default function HomeScreen() {
             [{ nativeEvent: { contentOffset: { x: scrollX } } }],
             { useNativeDriver: true }
           )}
+          onTouchStart={() => setShouldAutoScroll(false)}
+          onTouchEnd={handleTouchEnd}
+          onMomentumScrollEnd={handleTouchEnd}
           scrollEventThrottle={16}
           renderItem={({ item, index }) => {
             const inputRange = [
@@ -197,22 +278,58 @@ export default function HomeScreen() {
           }}
         />
 
-        {/* clothing categories */}
-        <Text style={styles.sectionTitle}>
-          Shop by Category
-        </Text>
+        {/* trending */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>
+            Hottest Styles
+          </Text>
+          <Text style={styles.sectionLink}>
+            View all <Ionicons name="chevron-forward" />
+          </Text>
+        </View>
 
         <FlatList
           horizontal
-          data={shoppingCategories}
+          data={hottestStyles}
           showsHorizontalScrollIndicator={false}
+          decelerationRate={'fast'}
+          style={styles.hottestStyleRow}
           keyExtractor={(item) => item.id.toString()}
+          snapToInterval={CARD_WIDTH + CARD_MARGIN}
           renderItem={({ item }) => (
-            <View style={styles.categoryCard}>
-              <Text style={styles.categoryText}>{item.name}</Text>
-            </View>
+            <Pressable
+              style={styles.hottestStyleCard}
+            >
+              {item.image_url && (
+                <Image source={{ uri: item.image_url }} style={styles.hottestStyleImage} resizeMode='cover' />
+              )}
+              <View key={item.id} style={styles.hottestStyleTextContainer}>
+                <Text style={styles.hottestStyleText}>{item.name}</Text>
+              </View>
+            </Pressable>
           )}
         />
+
+        {/* clothing categories */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>
+            Find Your Aesthetic
+          </Text>
+          <Text style={styles.sectionLink}>
+            Browse <Ionicons name="chevron-forward" />
+          </Text>
+        </View>
+
+        {shoppingCategories.map((cat, index) => {
+          const isLast = index === shoppingCategories.length - 1;
+
+          return (
+            <View key={cat.id} style={[styles.categoryCard, isLast && { borderBottomWidth: 0 }]}>
+              <Text style={styles.categoryText}>{cat.name}</Text>
+              <Ionicons name="chevron-forward" size={28} color={Colors.light.blue} />
+            </View>
+          )
+        })}
       </ScrollView>
     </SafeAreaView>
   );
@@ -225,6 +342,11 @@ const styles = StyleSheet.create({
   },
   scrollViewContainer: {
     paddingVertical: 10,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center'
   },
 
   // top bar
@@ -265,18 +387,28 @@ const styles = StyleSheet.create({
     outlineWidth: 0,
   },
 
-  // section title
-  sectionTitle: {
+  // section
+  sectionHeader: {
+    flexDirection: 'row',
     marginTop: 10,
     marginBottom: 5,
     marginHorizontal: 20,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  sectionTitle: {
     fontSize: 24,
     fontFamily: Fonts.semiBold,
+  },
+  sectionLink: {
+    fontSize: 16,
+    fontFamily: Fonts.light,
   },
 
   // news card
   newsCardRow: {
-    marginVertical: 10,
+    marginTop: 10,
+    marginBottom: 20,
   },
   newsCardBox: {
     marginHorizontal: 10,
@@ -311,16 +443,46 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.regular,
   },
 
+  // hottest styles
+  hottestStyleRow: {
+    marginVertical: 10,
+  },
+  hottestStyleCard: {
+    marginHorizontal: 10,
+    backgroundColor: Colors.light.blue,
+    borderRadius: 5,
+    width: CARD_WIDTH + CARD_MARGIN,
+    height: 300,
+    padding: 10,
+    overflow: 'hidden'
+  },
+  hottestStyleImage: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  hottestStyleTextContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 16,
+    zIndex: 2,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+  },
+  hottestStyleText: {
+    color: '#fff',
+    fontSize: 20,
+    fontFamily: Fonts.semiBold,
+    marginBottom: 4,
+  },
+
   // shopping categories
   categoryCard: {
-    borderRadius: 10,
-    backgroundColor: Colors.light.blue,
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.light.gray,
     padding: 16,
-    marginVertical: 10,
     marginHorizontal: 5,
-    alignItems: 'center',
-    justifyContent: 'center',
-    boxShadow: '0px 2px 4px rgba(220, 220, 220, 0.5)',
+    justifyContent: 'space-between',
   },
   categoryText: {
     fontSize: 20,
