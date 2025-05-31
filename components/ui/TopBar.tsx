@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import React from 'react'
-import { Platform, Pressable, StyleSheet, Text, TextInput, View, ViewStyle } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import SearchBar from './SearchBar';
 import { Fonts } from '@/constants/Fonts';
 import { Colors } from '@/constants/Colors';
@@ -21,7 +21,7 @@ export default function TopBar({ title = 'LIFTFIT', icon, value, onChangeText }:
                 <View style={styles.topBarTitleContainer}>
                     {icon && <Ionicons name={icon} size={24} style={styles.topBarTitleIcon}/>}
                     <Text style={styles.topBarTitle}>
-                        {title}
+                        {title.toUpperCase()}
                     </Text>
                 </View>
 

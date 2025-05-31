@@ -7,6 +7,7 @@ import { Animated } from 'react-native';
 import { supabase } from '../lib/supabase';
 import SectionHeader from '@/components/ui/SectionHeader';
 import TopBar from '@/components/ui/TopBar';
+import HorizontalProductList from '@/components/ui/HorizontalProductList';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = width * 0.7;
@@ -132,23 +133,23 @@ export default function HomeScreen() {
 
   // test
 
-  const hottestStyles = [
-    {
-      id: 1,
-      name: "Titanium Compression Shirt",
-      image_url: "https://lmreplnzixefnbzgwdxr.supabase.co/storage/v1/object/public/product-images//Titanium%20Compression%20Shirt.png",
-    },
-    {
-      id: 2,
-      name: "Titanium Compression Shorts",
-      image_url: "https://lmreplnzixefnbzgwdxr.supabase.co/storage/v1/object/public/product-images//Titanium%20Compression%20Shorts.png",
-    },
-    {
-      id: 3,
-      name: "Titanium Compression Tank",
-      image_url: "https://lmreplnzixefnbzgwdxr.supabase.co/storage/v1/object/public/product-images//Titanium%20Compression%20Tank.png",
-    }
-  ];
+  // const hottestStyles = [
+  //   {
+  //     id: "1",
+  //     name: "Titanium Compression Shirt",
+  //     image_url: "https://lmreplnzixefnbzgwdxr.supabase.co/storage/v1/object/public/product-images//Titanium%20Compression%20Shirt.png",
+  //   },
+  //   {
+  //     id: "2",
+  //     name: "Titanium Compression Shorts",
+  //     image_url: "https://lmreplnzixefnbzgwdxr.supabase.co/storage/v1/object/public/product-images//Titanium%20Compression%20Shorts.png",
+  //   },
+  //   {
+  //     id: "3",
+  //     name: "Titanium Compression Tank",
+  //     image_url: "https://lmreplnzixefnbzgwdxr.supabase.co/storage/v1/object/public/product-images//Titanium%20Compression%20Tank.png",
+  //   }
+  // ];
 
   return (
     <SafeAreaView style={styles.container}>
@@ -226,27 +227,7 @@ export default function HomeScreen() {
         {/* trending */}
         <SectionHeader title="Hottest Styles" linkText="View all" />
 
-        <FlatList
-          horizontal
-          data={hottestStyles}
-          showsHorizontalScrollIndicator={false}
-          decelerationRate={'fast'}
-          style={styles.hottestStyleRow}
-          keyExtractor={(item) => item.id.toString()}
-          snapToInterval={CARD_WIDTH + CARD_MARGIN}
-          renderItem={({ item }) => (
-            <Pressable
-              style={styles.hottestStyleCard}
-            >
-              {item.image_url && (
-                <Image source={{ uri: item.image_url }} style={styles.hottestStyleImage} resizeMode='cover' />
-              )}
-              <View key={item.id} style={styles.hottestStyleTextContainer}>
-                <Text style={styles.hottestStyleText}>{item.name}</Text>
-              </View>
-            </Pressable>
-          )}
-        />
+        {/* <HorizontalProductList data={hottestStyles} /> */}
 
         {/* clothing categories */}
         <SectionHeader title="Find Your Aesthetic" linkText="Browse" />
@@ -316,38 +297,6 @@ const styles = StyleSheet.create({
     color: '#eee',
     fontSize: 16,
     fontFamily: Fonts.regular,
-  },
-
-  // hottest styles
-  hottestStyleRow: {
-    marginVertical: 10,
-  },
-  hottestStyleCard: {
-    marginHorizontal: 10,
-    backgroundColor: Colors.light.blue,
-    borderRadius: 5,
-    width: CARD_WIDTH + CARD_MARGIN,
-    height: 300,
-    padding: 10,
-    overflow: 'hidden'
-  },
-  hottestStyleImage: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  hottestStyleTextContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: 16,
-    zIndex: 2,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-  },
-  hottestStyleText: {
-    color: '#fff',
-    fontSize: 20,
-    fontFamily: Fonts.semiBold,
-    marginBottom: 4,
   },
 
   // shopping categories
