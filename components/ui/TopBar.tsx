@@ -4,6 +4,7 @@ import { Platform, Pressable, StyleSheet, Text, View, ViewStyle } from 'react-na
 import SearchBar from './SearchBar';
 import { Fonts } from '@/constants/Fonts';
 import { Colors } from '@/constants/Colors';
+import { useRouter } from 'expo-router';
 
 type TopBarProps = {
     title?: string;
@@ -12,14 +13,29 @@ type TopBarProps = {
     onChangeText: (text: string) => void;
     /** If you want to tweak the search container on either platform */
     searchContainerStyle?: ViewStyle;
+    hasSearch?: boolean;
+    hasBackButton?: boolean;
 };
 
-export default function TopBar({ title = 'LIFTFIT', icon, value, onChangeText }: TopBarProps) {
+export default function TopBar({ title = 'LIFTFIT', icon, value, onChangeText, hasSearch = true, hasBackButton = false }: TopBarProps) {
+    const router = useRouter();
+
+    const handleBackPress = () => {
+        router.back();
+    };
     return (
         <>
             <View style={styles.topBar}>
                 <View style={styles.topBarTitleContainer}>
-                    {icon && <Ionicons name={icon} size={24} style={styles.topBarTitleIcon}/>}
+                    {hasBackButton &&
+                        <Ionicons
+                            name='chevron-back'
+                            size={32}
+                            style={styles.backButton}
+                            onPress={handleBackPress}
+                        />
+                    }
+                    {icon && <Ionicons name={icon} size={24} style={styles.topBarTitleIcon} />}
                     <Text style={styles.topBarTitle}>
                         {title.toUpperCase()}
                     </Text>
@@ -42,7 +58,7 @@ export default function TopBar({ title = 'LIFTFIT', icon, value, onChangeText }:
             </View>
 
             {/* search bar - mobile */}
-            {Platform.OS !== 'web' && (
+            {Platform.OS !== 'web' && hasSearch && (
                 <SearchBar value={value} onChangeText={onChangeText} />
             )}
         </>
@@ -78,5 +94,8 @@ const styles = StyleSheet.create({
     },
     topBarButtons: {
         marginHorizontal: 5,
+    },
+    backButton: {
+        marginRight: 10,
     },
 })

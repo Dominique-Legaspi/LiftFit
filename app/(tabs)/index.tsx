@@ -8,6 +8,7 @@ import { supabase } from '../lib/supabase';
 import SectionHeader from '@/components/ui/SectionHeader';
 import TopBar from '@/components/ui/TopBar';
 import HorizontalProductList from '@/components/ui/HorizontalProductList';
+import { useRouter } from 'expo-router';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = width * 0.7;
@@ -92,6 +93,7 @@ export default function HomeScreen() {
 
   useEffect(() => {
     if (!shouldAutoScroll || newsPost.length === 0) return;
+
 
     const interval = setInterval(() => {
       if (!flatListRef.current) return;
@@ -230,7 +232,7 @@ export default function HomeScreen() {
         {/* <HorizontalProductList data={hottestStyles} /> */}
 
         {/* clothing categories */}
-        <SectionHeader title="Find Your Aesthetic" linkText="Browse" />
+        <SectionHeader title="Find Your Aesthetic" linkText="Browse" link={`/browse`} />
 
         {shoppingCategories.map((cat, index) => {
           const isLast = index === shoppingCategories.length - 1;

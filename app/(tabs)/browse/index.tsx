@@ -1,12 +1,13 @@
 import TopBar from '@/components/ui/TopBar';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { supabase } from '../lib/supabase';
+import { ActivityIndicator, Image, ImageSourcePropType, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { supabase } from '../../lib/supabase';
 import SectionHeader from '@/components/ui/SectionHeader';
 import { Colors } from '@/constants/Colors';
 import { Fonts } from '@/constants/Fonts';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import HorizontalProductList from '@/components/ui/HorizontalProductList';
+import { useRouter } from 'expo-router';
 
 type Product = {
   id: string;
@@ -42,7 +43,29 @@ function getRandomSample<T>(arr: T[], count: number): T[] {
   return shuffled.slice(0, count);
 }
 
+type BrowseCardProps = {
+  label: string;
+  image?: ImageSourcePropType;
+  link?: () => void;
+}
+
+export const BrowseCard: React.FC<BrowseCardProps> = ({ label, image, link }) => {
+  return (
+    <Pressable
+      onPress={link}
+      style={styles.browseCardRow}>
+      <View style={styles.browseCardLabelContainer}>
+        <Text style={styles.browseCardLabel}>
+          {label}
+        </Text>
+      </View>
+      {image && <Image source={image} style={styles.browseCardImage} resizeMode='cover' />}
+    </Pressable>
+  )
+}
+
 export default function BrowseScreen() {
+  const router = useRouter();
   const [loading, setLoading] = useState<boolean>(false);
 
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -107,11 +130,42 @@ export default function BrowseScreen() {
     )
   }
 
-  return (
+  const shopAllCategories = [
+    {
+      id: 1,
+      name: 'Shop All',
+      image: require('../../../assets/images/browse_all.png'),
+      onPress: () => router.push('/browse/shop'),
+    },
+    {
+      id: 2,
+      name: 'Shop Men',
+      image: require('../../../assets/images/browse_men.png'),
+      onPress: () => router.push('/browse/shop'),
+    },
+    {
+      id: 3,
+      name: 'Shop Women',
+      image: require('../../../assets/images/browse_women.png'),
+      onPress: () => router.push('/browse/shop'),
+    },
+  ]
 
+  return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollViewContainer}>
         <TopBar title="browse" icon="search-outline" value={searchQuery} onChangeText={setSearchQuery} />
+
+        <View style={styles.browseCardContainer}>
+          {shopAllCategories.map((cat) => (
+            <BrowseCard
+              key={cat.id}
+              label={cat.name}
+              image={cat.image}
+              link={cat.onPress}
+            />
+          ))}
+        </View>
 
         {shoppingCategories.map((category) => {
           const typesForThisCategory = shoppingTypes.filter(
@@ -132,7 +186,7 @@ export default function BrowseScreen() {
             (
               <View key={category.id} style={styles.categorySection}>
                 <SectionHeader title={category.name} linkText="View all" />
-                <HorizontalProductList data={randomProductsInCategory} cardHeight={200} />
+                <HorizontalProductList data={randomProductsInCategory} cardWidth={300} cardHeight={200} />
 
                 {typesForThisCategory.map((type, index) => {
                   const isLast = index === typesForThisCategory.length - 1;
@@ -167,6 +221,46 @@ const styles = StyleSheet.create({
     justifyContent: 'center'
   },
 
+  // browse card
+  browseCardContainer: {
+    flex: 1,
+    padding: 16,
+  },
+  browseCardRow: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    height: 200,
+    borderRadius: 3,
+    borderWidth: 1,
+    borderColor: Colors.light.lightgray,
+    marginBottom: 8,
+    overflow: 'hidden',
+  },
+  browseCardLabelContainer: {
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: '30%',
+    left: 0,
+    right: 0,
+    padding: 16,
+    zIndex: 2,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+  },
+  browseCardLabel: {
+    fontSize: 24,
+    fontFamily: Fonts.semiBold,
+    color: '#fff',
+  },
+  browseCardImage: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+  },
+
+  // category section
   categorySection: {
     marginBottom: 8,
   },
