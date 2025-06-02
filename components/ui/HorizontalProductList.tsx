@@ -16,7 +16,7 @@ type HorizontalProductListProps = {
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DEFAULT_CARD_WIDTH = SCREEN_WIDTH * 0.6;
 const DEFAULT_CARD_HEIGHT = 300;
-const DEFAULT_CARD_MARGIN = 10;
+const DEFAULT_CARD_MARGIN = 0;
 
 const HorizontalProductList: React.FC<HorizontalProductListProps> = ({
     data,

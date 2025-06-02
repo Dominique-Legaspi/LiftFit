@@ -1,7 +1,7 @@
 import { Colors } from '@/constants/Colors';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import React, { useState } from 'react';
-import { Platform, Pressable, StyleSheet, TextInput, TextStyle, ViewStyle } from 'react-native';
+import React, { useRef, useState } from 'react';
+import { Keyboard, Platform, Pressable, StyleSheet, TextInput, TextStyle, ViewStyle } from 'react-native';
 
 type SearchBarProps = {
     value: string;
@@ -14,16 +14,24 @@ type SearchBarProps = {
 export default function SearchBar({
     value,
     onChangeText,
-    placeholder = 'Looking for Something',
+    placeholder = 'Looking for Something?',
     containerStyle,
     inputStyle,
 }: SearchBarProps) {
 
     const [isActive, setIsActive] = useState<boolean>(false);
+    const inputRef = useRef<TextInput>(null);
 
     const activeColor = Colors.light.blue;
     const inactiveColor = Colors.light.gray;
     const currentColor = isActive ? activeColor : inactiveColor;
+
+    const handleCancel = () => {
+        onChangeText('');
+        inputRef.current?.blur();
+        Keyboard.dismiss();
+        setIsActive(false);
+    }
 
     return (
         <Pressable
@@ -54,6 +62,14 @@ export default function SearchBar({
                     inputStyle,
                 ]}
             />
+            {value && <Pressable onPress={handleCancel}>
+                <Ionicons
+                    name="close"
+                    size={20}
+                    style={{ color: currentColor, marginLeft: 8 }}
+                />
+            </Pressable>
+            }
         </Pressable>
 
     )
