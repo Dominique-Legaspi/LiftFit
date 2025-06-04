@@ -7,18 +7,16 @@ import { Text, TextStyle, View, ViewStyle, Pressable, StyleSheet } from 'react-n
 type SectionHeaderProps = {
     title: string;
     linkText?: string;
-    link?: string;
+    link?: () => void;
     containerStyle?: ViewStyle;
     titleStyle?: TextStyle;
     linkTextStyle?: TextStyle;
 }
 
 export function SectionHeader({ title, linkText, link, containerStyle, titleStyle, linkTextStyle }: SectionHeaderProps) {
-    const router = useRouter();
-
     const handlePress = () => {
         if (link) {
-            router.push(link as any);
+            link();
         }
     };
 

@@ -4,6 +4,8 @@ import TopBar from '@/components/ui/TopBar';
 import { Colors } from '@/constants/Colors';
 import { Fonts } from '@/constants/Fonts';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useFocusEffect } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Dimensions, FlatList, Modal, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -29,6 +31,13 @@ type ProdType = { id: number; name: string; category_id: number };
 type ProdStyle = { id: string; name: string };
 
 export default function ShopScreen() {
+    // read local search params
+    const { category_id, type_id, gender } = useLocalSearchParams() as {
+        category_id?: string;
+        type_id?: string;
+        gender?: string;
+    };
+
     // search query
     const [searchQuery, setSearchQuery] = useState<string>('');
 
@@ -50,7 +59,7 @@ export default function ShopScreen() {
     const [selectedGender, setSelectedGender] = useState<string | null>(null);
     const [onSaleOnly, setOnSaleOnly] = useState<boolean>(false);
     const [newOnly, setNewOnly] = useState<boolean>(false);
-    const [sortBy, setSortBy] = useState<string>('created_at_desc');
+    const [sortBy, setSortBy] = useState<string>('created_at_asc');
 
     // temp filter state used inside modal
     const [tempSelectedStyles, setTempSelectedStyles] = useState<string[]>([]);
@@ -59,7 +68,7 @@ export default function ShopScreen() {
     const [tempSelectedGender, setTempSelectedGender] = useState<string | null>(null);
     const [tempOnSaleOnly, setTempOnSaleOnly] = useState<boolean>(false);
     const [tempNewOnly, setTempNewOnly] = useState<boolean>(false);
-    const [tempSortBy, setTempSortBy] = useState<string>('created_at_desc');
+    const [tempSortBy, setTempSortBy] = useState<string>('created_at_asc');
 
     // control which modal is open: main vs sub-screen
     const [activeSubFilter, setActiveSubFilter] = useState<
@@ -76,19 +85,19 @@ export default function ShopScreen() {
 
     useEffect(() => {
         (async () => {
-            // 1) fetch categories
+            // fetch categories
             const { data: catData, error: catErr } = await supabase
                 .from('product_categories')
                 .select('id, name');
             if (!catErr && catData) setAllCategories(catData);
 
-            // 2) fetch types
+            // fetch types
             const { data: typeData, error: typeErr } = await supabase
                 .from('product_types')
                 .select('id, name, category_id');
             if (!typeErr && typeData) setAllTypes(typeData);
 
-            // 3) fetch styles
+            // fetch styles
             const { data: styleData, error: styleErr } = await supabase
                 .from('product_styles')
                 .select('id, name');
@@ -205,7 +214,7 @@ export default function ShopScreen() {
                     query = query.order('name', { ascending: false });
                     break;
                 default:
-                    query = query.order('created_at', { ascending: false });
+                    query = query.order('created_at', { ascending: true });
             }
 
             // apply pagination
@@ -234,23 +243,117 @@ export default function ShopScreen() {
                 setHasMore(false);
             }
 
-            setPage((prev) => prev + 1);
+            setPage(pageNumber + 1);
         },
         [searchQuery, selectedCategories, selectedStyles, selectedTypes, selectedGender, onSaleOnly, newOnly, sortBy]
     );
 
-    // when search query changes, reset pagination and fetch page 0
-    useEffect(() => {
-        (async () => {
-            setInitialLoading(true);
-            setProducts([]);
+    // if any params are present, reset products and fetch immediately
+    useFocusEffect(
+        useCallback(() => {
+            // Parse route params to numeric arrays / string
+            const cats: number[] = [];
+            const types: number[] = [];
+            let gen: string | null = null;
+
+            if (category_id) {
+                const cid = parseInt(category_id, 10);
+                if (!isNaN(cid)) cats.push(cid);
+            }
+            if (type_id) {
+                const tid = parseInt(type_id, 10);
+                if (!isNaN(tid)) types.push(tid);
+            }
+            if (gender) {
+                gen = gender;
+            }
+
+            // Reset pagination, products, hasMore, loading state
             setPage(0);
             setHasMore(true);
+            setProducts([]);
+            setInitialLoading(true);
 
-            await fetchProductsPage(0);
+            // Update our “applied filters” so that loadMore() will know what to request next
+            setSelectedCategories(cats);
+            setSelectedTypes(types);
+            setSelectedGender(gen);
+
+            // Do a “page 0” Supabase query inline
+            (async () => {
+                try {
+                    const from = 0;
+                    const to = PAGE_SIZE - 1;
+
+                    let query = supabase
+                        .from('products')
+                        .select(`
+              *,
+              product_styles(name),
+              product_types(name),
+              product_categories(name)
+            `);
+
+                    // Apply the same filters
+                    if (cats.length > 0) {
+                        query = query.in('category_id', cats);
+                    }
+                    if (types.length > 0) {
+                        query = query.in('type_id', types);
+                    }
+                    if (gen) {
+                        query = query.eq('gender', gen);
+                    }
+
+                    // Sort by oldest first
+                    query = query.order('created_at', { ascending: true });
+
+                    // Pagination range
+                    query = query.range(from, to);
+
+                    const { data, error } = await query;
+                    if (error) {
+                        console.error('Error on initial fetch (focus):', error);
+                        setHasMore(false);
+                        setProducts([]);
+                        return;
+                    }
+
+                    if (!data || data.length === 0) {
+                        setHasMore(false);
+                        setProducts([]);
+                    } else {
+                        setProducts(data as Product[]);
+                        if ((data as Product[]).length < PAGE_SIZE) {
+                            setHasMore(false);
+                        }
+                        setPage(1);
+                    }
+                } catch (err) {
+                    console.error('Unexpected fetch error:', err);
+                    setProducts([]);
+                    setHasMore(false);
+                } finally {
+                    setInitialLoading(false);
+                }
+            })();
+
+            // Cleanup
+            return () => { };
+        }, [category_id, type_id, gender]) //
+    );
+
+    useEffect(() => {
+        setPage(0);
+        setHasMore(true);
+        setProducts([]);
+        setInitialLoading(true);
+
+        fetchProductsPage(0).then(() => {
             setInitialLoading(false);
-        })();
-    }, [searchQuery, fetchProductsPage]);
+        });
+    }, [selectedCategories, selectedTypes, selectedStyles, selectedGender, searchQuery, onSaleOnly, newOnly, sortBy]);
+
 
     const loadMore = useCallback(async () => {
         if (loadingMore || !hasMore) return;
@@ -332,7 +435,7 @@ export default function ShopScreen() {
         setTempSelectedGender(null);
         setTempOnSaleOnly(false);
         setTempNewOnly(false);
-        setTempSortBy('created_at_desc');
+        setTempSortBy('created_at_asc');
     };
 
     // sub-filter toggle helpers
@@ -395,7 +498,7 @@ export default function ShopScreen() {
                             onPress={openFilterModal}
                         >
                             <Ionicons name="filter-outline" size={20} color={appliedFilterCount > 0 ? '#fff' : Colors.light.gray} />
-                            <Text style={[styles.filterButtonText, appliedFilterCount > 0 && styles.filterButtonTextActive]}>Filter & Sort{appliedFilterCount > 0 && `: ${appliedFilterCount}`}</Text>
+                            <Text style={[styles.filterButtonText, appliedFilterCount > 0 && styles.filterButtonTextActive]}>Filter{appliedFilterCount > 0 && ` (${appliedFilterCount})`}</Text>
                         </Pressable>
                     </View>
                 </View>
@@ -407,28 +510,31 @@ export default function ShopScreen() {
                         <ActivityIndicator size="large" color={Colors.light.blue} />
                     </View>
 
-                ) : (
-                    <FlatList
-                        data={products}
-                        keyExtractor={(item, index) => `${item.id}-${index}`}
-                        renderItem={renderProductItem}
-                        horizontal={false}
-                        numColumns={isGrid ? 2 : 1}
-                        showsVerticalScrollIndicator={true}
-                        contentContainerStyle={styles.productsContainer}
-                        columnWrapperStyle={isGrid ? styles.columnWrapper : undefined}
-                        style={{ flex: 1 }}
-                        key={isGrid ? 'GRID' : 'LIST'}
-                        onEndReached={loadMore}
-                        onEndReachedThreshold={0.3}
-                        ListFooterComponent={
-                            loadingMore ? (
-                                <View style={styles.footerSpinner}>
-                                    <ActivityIndicator size="small" color={Colors.light.blue} />
-                                </View>
-                            ) : null
-                        }
-                    />
+                ) : (products.length > 0 ? (<FlatList
+                            data={products}
+                            keyExtractor={(item) => item.id}
+                            renderItem={renderProductItem}
+                            horizontal={false}
+                            numColumns={isGrid ? 2 : 1}
+                            showsVerticalScrollIndicator={true}
+                            contentContainerStyle={styles.productsContainer}
+                            columnWrapperStyle={isGrid ? styles.columnWrapper : undefined}
+                            style={{ flex: 1 }}
+                            key={isGrid ? 'GRID' : 'LIST'}
+                            onEndReached={loadMore}
+                            onEndReachedThreshold={0.3}
+                            ListFooterComponent={
+                                loadingMore ? (
+                                    <View style={styles.footerSpinner}>
+                                        <ActivityIndicator size="small" color={Colors.light.blue} />
+                                    </View>
+                                ) : null
+                            }
+                        />) : (
+                        <View style={styles.noProductsContainer}>
+                            <Text style={styles.noProductsText}>No products available.</Text>
+                        </View>
+                    )
                 )}
             </View>
 
@@ -741,6 +847,16 @@ const styles = StyleSheet.create({
     // Spinner at bottom for subsequent “load more”
     footerSpinner: {
         paddingVertical: 16,
+    },
+    noProductsContainer: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    noProductsText: {
+        fontSize: 36,
+        fontFamily: Fonts.bold,
+        color: Colors.light.lightgray,
     },
 
     // header

@@ -1,7 +1,7 @@
 import TopBar from '@/components/ui/TopBar';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Image, ImageSourcePropType, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '@/app/lib/supabase';
 import SectionHeader from '@/components/ui/SectionHeader';
 import { Colors } from '@/constants/Colors';
 import { Fonts } from '@/constants/Fonts';
@@ -141,13 +141,19 @@ export default function BrowseScreen() {
       id: 2,
       name: 'Shop Men',
       image: require('../../../assets/images/browse_men.png'),
-      onPress: () => router.push('/browse/shop'),
+      onPress: () => router.push({
+        pathname: '/browse/shop',
+        params: { gender: 'Men' },
+      }),
     },
     {
       id: 3,
       name: 'Shop Women',
       image: require('../../../assets/images/browse_women.png'),
-      onPress: () => router.push('/browse/shop'),
+      onPress: () => router.push({
+        pathname: '/browse/shop',
+        params: { gender: 'Women' },
+      }),
     },
   ]
 
@@ -185,17 +191,35 @@ export default function BrowseScreen() {
           return (typesForThisCategory.length > 0 &&
             (
               <View key={category.id} style={styles.categorySection}>
-                <SectionHeader title={category.name} linkText="View all" />
+                <SectionHeader
+                  title={category.name}
+                  linkText="View all"
+                  link={() =>
+                    router.push({
+                      pathname: '/browse/shop',
+                      params: { category_id: category.id  },
+                    })
+                  }
+                />
                 <HorizontalProductList data={randomProductsInCategory} cardWidth={300} cardHeight={200} />
 
                 {typesForThisCategory.map((type, index) => {
                   const isLast = index === typesForThisCategory.length - 1;
 
                   return (
-                    <View key={type.id} style={[styles.categoryLabel, isLast && { borderBottomWidth: 0 }]}>
+                    <Pressable
+                      key={type.id}
+                      style={[styles.categoryLabel, isLast && { borderBottomWidth: 0 }]}
+                      onPress={() =>
+                        router.push({
+                          pathname: '/browse/shop',
+                          params: { type_id: type.id },
+                        })
+                      }
+                    >
                       <Text style={styles.categoryText}>{type.name.charAt(0).toUpperCase() + type.name.slice(1)}</Text>
                       <Ionicons name="chevron-forward" size={28} color={Colors.light.blue} />
-                    </View>
+                    </Pressable>
                   )
                 })}
               </View>

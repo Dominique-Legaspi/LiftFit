@@ -27,6 +27,7 @@ type Category = {
 };
 
 export default function HomeScreen() {
+  const router = useRouter();
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
 
@@ -232,7 +233,7 @@ export default function HomeScreen() {
         {/* <HorizontalProductList data={hottestStyles} /> */}
 
         {/* clothing categories */}
-        <SectionHeader title="Find Your Aesthetic" linkText="Browse" link={`/browse`} />
+        <SectionHeader title="Find Your Aesthetic" linkText="Browse" link={() => router.push('/browse')} />
 
         {shoppingCategories.map((cat, index) => {
           const isLast = index === shoppingCategories.length - 1;

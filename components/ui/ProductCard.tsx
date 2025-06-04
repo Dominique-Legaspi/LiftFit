@@ -1,6 +1,7 @@
 import { Colors } from "@/constants/Colors";
 import { Fonts } from "@/constants/Fonts";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Animated, Image, ImageStyle, Pressable, StyleProp, StyleSheet, Text, TextStyle, View } from "react-native";
 
@@ -31,6 +32,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
     imageStyle,
     textStyle,
 }) => {
+    const router = useRouter();
+
     const [imageLoaded, setImageLoaded] = useState<boolean>(false);
     const opacity = useRef(new Animated.Value(0)).current;
 
@@ -39,20 +42,11 @@ const ProductCard: React.FC<ProductCardProps> = ({
         : null;
 
     useEffect(() => {
-
         if (!firstUrl) {
             setImageLoaded(true);
-            return;
+        } else {
+            setImageLoaded(false);
         }
-        Image.prefetch(firstUrl)
-            .then(() => {
-                setImageLoaded(true);
-            })
-            .catch((err) => {
-                console.warn('Image.prefetch failed for', firstUrl, err);
-                setImageLoaded(true);
-            })
-
     }, [firstUrl])
 
     useEffect(() => {
@@ -79,7 +73,14 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 styles.cardBase,
                 { width: cardWidth, height: cardHeight, margin: cardMargin },
             ]}
-            onPress={() => onPress && onPress(product)}
+            onPress={() => {
+                if (onPress) {
+                    onPress(product);
+                }
+                else {
+                    router.push(`/product/${product.id}`);
+                }
+            }}
         >
             {!imageLoaded && firstUrl && (
                 <View style={[styles.imagePlaceholder, { width: cardWidth, height: cardHeight }]}>
@@ -94,8 +95,12 @@ const ProductCard: React.FC<ProductCardProps> = ({
                         { width: cardWidth, height: cardHeight, opacity },
                         imageStyle]}
                     resizeMode="cover"
+                    onLoad={() => {
+                        setImageLoaded(true);
+                    }}
                     onError={(e) => {
                         console.warn('Failed to load image', firstUrl, e.nativeEvent.error);
+                        setImageLoaded(true);
                     }}
                 />
             )}
