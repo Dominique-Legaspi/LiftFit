@@ -1,3 +1,5 @@
+// supabaseClient.ts
+import 'react-native-url-polyfill/auto'; // make sure this is at the very top
 import { createClient } from '@supabase/supabase-js';
 import Constants from 'expo-constants';
 
@@ -18,4 +20,10 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
   );
 }
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+export const supabase = createClient(
+  SUPABASE_URL,
+  SUPABASE_ANON_KEY,
+  {
+    realtime: ({ enabled: false } as any),
+  }
+);

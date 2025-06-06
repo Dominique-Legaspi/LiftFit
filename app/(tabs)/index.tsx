@@ -5,6 +5,10 @@ import { Fonts } from '@/constants/Fonts';
 import { useEffect, useRef, useState } from 'react';
 import { Animated } from 'react-native';
 import { supabase } from '../lib/supabase';
+import SectionHeader from '@/components/ui/SectionHeader';
+import TopBar from '@/components/ui/TopBar';
+import HorizontalProductList from '@/components/ui/HorizontalProductList';
+import { useRouter } from 'expo-router';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = width * 0.7;
@@ -23,10 +27,10 @@ type Category = {
 };
 
 export default function HomeScreen() {
+  const router = useRouter();
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
 
-  const [searchActive, setSearchActive] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   const [newsPost, setNewsPost] = useState<News[]>([]);
@@ -91,6 +95,7 @@ export default function HomeScreen() {
   useEffect(() => {
     if (!shouldAutoScroll || newsPost.length === 0) return;
 
+
     const interval = setInterval(() => {
       if (!flatListRef.current) return;
 
@@ -131,23 +136,23 @@ export default function HomeScreen() {
 
   // test
 
-  const hottestStyles = [
-    {
-      id: 1,
-      name: "Titanium Compression Shirt",
-      image_url: "https://lmreplnzixefnbzgwdxr.supabase.co/storage/v1/object/public/product-images//Titanium%20Compression%20Shirt.png",
-    },
-    {
-      id: 2,
-      name: "Titanium Compression Shorts",
-      image_url: "https://lmreplnzixefnbzgwdxr.supabase.co/storage/v1/object/public/product-images//Titanium%20Compression%20Shorts.png",
-    },
-    {
-      id: 3,
-      name: "Titanium Compression Tank",
-      image_url: "https://lmreplnzixefnbzgwdxr.supabase.co/storage/v1/object/public/product-images//Titanium%20Compression%20Tank.png",
-    }
-  ];
+  // const hottestStyles = [
+  //   {
+  //     id: "1",
+  //     name: "Titanium Compression Shirt",
+  //     image_url: "https://lmreplnzixefnbzgwdxr.supabase.co/storage/v1/object/public/product-images//Titanium%20Compression%20Shirt.png",
+  //   },
+  //   {
+  //     id: "2",
+  //     name: "Titanium Compression Shorts",
+  //     image_url: "https://lmreplnzixefnbzgwdxr.supabase.co/storage/v1/object/public/product-images//Titanium%20Compression%20Shorts.png",
+  //   },
+  //   {
+  //     id: "3",
+  //     name: "Titanium Compression Tank",
+  //     image_url: "https://lmreplnzixefnbzgwdxr.supabase.co/storage/v1/object/public/product-images//Titanium%20Compression%20Tank.png",
+  //   }
+  // ];
 
   return (
     <SafeAreaView style={styles.container}>
@@ -163,66 +168,10 @@ export default function HomeScreen() {
         }
       >
 
-        {/* title */}
-        <View style={styles.topBar}>
-          <Text style={styles.topBarTitle}>
-            LIFTFIT
-          </Text>
-
-          {/* search bar - web */}
-          {Platform.OS === 'web' && (
-            <Pressable
-              style={[styles.searchBarContainer, { borderColor: searchActive ? Colors.light.blue : Colors.light.gray }]}>
-              <Ionicons name="search-outline" size={20} style={[{ color: searchActive ? Colors.light.blue : Colors.light.gray }]} />
-              <TextInput
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                onFocus={() => setSearchActive(true)}
-                onBlur={() => setSearchActive(false)}
-                placeholder="Looking for something?"
-                placeholderTextColor={searchActive ? Colors.light.blue : Colors.light.gray}
-                style={[styles.searchBarInput, { fontStyle: !searchQuery ? 'italic' : 'normal' }]}
-              />
-            </Pressable>
-          )}
-
-          {/* top bar notifications + cart */}
-          <View style={styles.topBarButtonsContainer}>
-            <Pressable style={styles.topBarButtons}>
-              <Ionicons name="notifications-outline" size={28} />
-            </Pressable>
-            <Pressable style={styles.topBarButtons}>
-              <Ionicons name="cart-outline" size={28} />
-            </Pressable>
-          </View>
-        </View>
-
-        {/* search bar - mobile */}
-        {Platform.OS !== 'web' && (
-          <Pressable
-            style={[styles.searchBarContainer, { borderColor: searchActive ? Colors.light.blue : Colors.light.gray }]}>
-            <Ionicons name="search-outline" size={20} style={[{ color: searchActive ? Colors.light.blue : Colors.light.gray }]} />
-            <TextInput
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              onFocus={() => setSearchActive(true)}
-              onBlur={() => setSearchActive(false)}
-              placeholder="Looking for something?"
-              placeholderTextColor={searchActive ? Colors.light.blue : Colors.light.gray}
-              style={[styles.searchBarInput, { fontStyle: !searchQuery ? 'italic' : 'normal' }]}
-            />
-          </Pressable>
-        )}
+        <TopBar value={searchQuery} onChangeText={setSearchQuery} />
 
         {/* news cards */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>
-            What's New
-          </Text>
-          <Text style={styles.sectionLink}>
-            View all <Ionicons name="chevron-forward" />
-          </Text>
-        </View>
+        <SectionHeader title="What's New" linkText="View all" />
 
         <Animated.FlatList
           ref={flatListRef}
@@ -279,46 +228,12 @@ export default function HomeScreen() {
         />
 
         {/* trending */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>
-            Hottest Styles
-          </Text>
-          <Text style={styles.sectionLink}>
-            View all <Ionicons name="chevron-forward" />
-          </Text>
-        </View>
+        <SectionHeader title="Hottest Styles" linkText="View all" />
 
-        <FlatList
-          horizontal
-          data={hottestStyles}
-          showsHorizontalScrollIndicator={false}
-          decelerationRate={'fast'}
-          style={styles.hottestStyleRow}
-          keyExtractor={(item) => item.id.toString()}
-          snapToInterval={CARD_WIDTH + CARD_MARGIN}
-          renderItem={({ item }) => (
-            <Pressable
-              style={styles.hottestStyleCard}
-            >
-              {item.image_url && (
-                <Image source={{ uri: item.image_url }} style={styles.hottestStyleImage} resizeMode='cover' />
-              )}
-              <View key={item.id} style={styles.hottestStyleTextContainer}>
-                <Text style={styles.hottestStyleText}>{item.name}</Text>
-              </View>
-            </Pressable>
-          )}
-        />
+        {/* <HorizontalProductList data={hottestStyles} /> */}
 
         {/* clothing categories */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>
-            Find Your Aesthetic
-          </Text>
-          <Text style={styles.sectionLink}>
-            Browse <Ionicons name="chevron-forward" />
-          </Text>
-        </View>
+        <SectionHeader title="Find Your Aesthetic" linkText="Browse" link={() => router.push('/browse')} />
 
         {shoppingCategories.map((cat, index) => {
           const isLast = index === shoppingCategories.length - 1;
@@ -347,62 +262,6 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center'
-  },
-
-  // top bar
-  topBar: {
-    marginHorizontal: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  topBarTitle: {
-    fontSize: 28,
-    fontFamily: Fonts.semiBold,
-    letterSpacing: 1,
-    color: Colors.light.blue,
-  },
-  topBarButtonsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  topBarButtons: {
-    marginHorizontal: 5,
-  },
-
-  // search bar
-  searchBarContainer: {
-    marginHorizontal: 20,
-    flexDirection: 'row',
-    borderWidth: 1,
-    borderRadius: 3,
-    ...(Platform.OS === 'web' ? { width: 500, padding: 5 } : { flex: 1, marginVertical: 10, padding: 10 }),
-  },
-  searchBarInput: {
-    flex: 1,
-    marginLeft: 10,
-    fontSize: 14,
-    color: Colors.light.blue,
-    outlineWidth: 0,
-  },
-
-  // section
-  sectionHeader: {
-    flexDirection: 'row',
-    marginTop: 10,
-    marginBottom: 5,
-    marginHorizontal: 20,
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  sectionTitle: {
-    fontSize: 24,
-    fontFamily: Fonts.semiBold,
-  },
-  sectionLink: {
-    fontSize: 16,
-    fontFamily: Fonts.light,
   },
 
   // news card
@@ -441,38 +300,6 @@ const styles = StyleSheet.create({
     color: '#eee',
     fontSize: 16,
     fontFamily: Fonts.regular,
-  },
-
-  // hottest styles
-  hottestStyleRow: {
-    marginVertical: 10,
-  },
-  hottestStyleCard: {
-    marginHorizontal: 10,
-    backgroundColor: Colors.light.blue,
-    borderRadius: 5,
-    width: CARD_WIDTH + CARD_MARGIN,
-    height: 300,
-    padding: 10,
-    overflow: 'hidden'
-  },
-  hottestStyleImage: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  hottestStyleTextContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: 16,
-    zIndex: 2,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-  },
-  hottestStyleText: {
-    color: '#fff',
-    fontSize: 20,
-    fontFamily: Fonts.semiBold,
-    marginBottom: 4,
   },
 
   // shopping categories
