@@ -233,7 +233,7 @@ export default function HomeScreen() {
         {/* <HorizontalProductList data={hottestStyles} /> */}
 
         {/* clothing categories */}
-        <SectionHeader title="Find Your Aesthetic" linkText="Browse" link={() => router.push('/browse')} />
+        <SectionHeader title="Find Your Aesthetic" linkText="Browse" link={() => router.push('/browse' as any)} />
 
         {shoppingCategories.map((cat, index) => {
           const isLast = index === shoppingCategories.length - 1;
