@@ -543,7 +543,7 @@ const styles = StyleSheet.create({
         width: '100%',
         height: 520,
         // overflow: 'hidden',
-        backgroundColor: '#000000',
+        backgroundColor: '#00000033',
         alignItems: 'center',
         justifyContent: 'center'
     },
