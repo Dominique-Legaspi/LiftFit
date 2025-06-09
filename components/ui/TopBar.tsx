@@ -9,23 +9,29 @@ import { useRouter } from 'expo-router';
 type TopBarProps = {
     title?: string;
     icon?: React.ComponentProps<typeof Ionicons>['name'];
-    value: string;
-    onChangeText: (text: string) => void;
+    value?: string;
+    onChangeText?: (text: string) => void;
     /** If you want to tweak the search container on either platform */
     searchContainerStyle?: ViewStyle;
     hasSearch?: boolean;
     hasBackButton?: boolean;
+    style?: ViewStyle,
 };
 
-export default function TopBar({ title = 'LIFTFIT', icon, value, onChangeText, hasSearch = true, hasBackButton = false }: TopBarProps) {
+export default function TopBar({ title = 'LIFTFIT', icon, value = '', onChangeText, searchContainerStyle, hasSearch = true, hasBackButton = false, style }: TopBarProps) {
     const router = useRouter();
 
     const handleBackPress = () => {
         router.back();
     };
+
+    const handleChange = (text: string) => {
+    onChangeText?.(text);
+  };
+
     return (
         <>
-            <View style={styles.topBar}>
+            <View style={[styles.topBar, style]}>
                 <View style={styles.topBarTitleContainer}>
                     {hasBackButton &&
                         <Ionicons
@@ -42,8 +48,8 @@ export default function TopBar({ title = 'LIFTFIT', icon, value, onChangeText, h
                 </View>
 
                 {/* search bar - web */}
-                {Platform.OS === 'web' && (
-                    <SearchBar value={value} onChangeText={onChangeText} />
+                {Platform.OS === 'web' && hasSearch && onChangeText && (
+                    <SearchBar value={value} onChangeText={handleChange} />
                 )}
 
                 {/* top bar notifications + cart */}
@@ -58,8 +64,8 @@ export default function TopBar({ title = 'LIFTFIT', icon, value, onChangeText, h
             </View>
 
             {/* search bar - mobile */}
-            {Platform.OS !== 'web' && hasSearch && (
-                <SearchBar value={value} onChangeText={onChangeText} />
+            {Platform.OS !== 'web' && hasSearch && onChangeText && (
+                <SearchBar value={value} onChangeText={handleChange} />
             )}
         </>
     )

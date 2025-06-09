@@ -5,6 +5,8 @@ import { ActivityIndicator, Animated, Dimensions, Image, NativeScrollEvent, Nati
 import { supabase } from '@/app/lib/supabase';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Fonts } from '@/constants/Fonts';
+import TopBar from '@/components/ui/TopBar';
+import { ImageCarousel } from '@/components/ui/ImageCarousel';
 
 export const options = {
     headerShown: false,
@@ -50,6 +52,9 @@ export default function ProductScreen() {
 
     const [selectedColor, setSelectedColor] = useState<ProductColor | null>(null);
     const [selectedSize, setSelectedSize] = useState<ProductStock | null>(null);
+
+    const [isWishlisted, setIsWishlisted] = useState<boolean>(false);
+    const [isNewItem, setIsNewItem] = useState<boolean>(false);
 
     const [loading, setLoading] = useState<boolean>(false);
 
@@ -129,12 +134,28 @@ export default function ProductScreen() {
         fetchProductStock();
     }, [productId]);
 
+    // set image if only one image
     const firstUrl = product?.image_urls && product?.image_urls.length > 0
         ? product?.image_urls[0]
         : null;
 
-    //
+    // determine if new item
+    const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+    useEffect(() => {
+        if (!product?.created_at) {
+            setIsNewItem(false);
+            return;
+        }
 
+        const productDate = new Date(product.created_at);
+        const validDate = productDate instanceof Date && !isNaN(productDate.getTime());
+        const isNew = validDate && (Date.now() - productDate.getTime() < SEVEN_DAYS_MS);
+
+        setIsNewItem(isNew);
+    }, [product])
+
+
+    // determine discount
     const hasDiscount =
         product?.discount !== undefined &&
         product?.discount !== null &&
@@ -152,6 +173,7 @@ export default function ProductScreen() {
         .filter((stock) => stock.product_color_id === selectedColor?.id)
         .map((stock) => [stock.size, stock]));
 
+    // sizes
     const orderedSizes: ProductStock[] = SIZE_ORDER.map((size) => {
         const stockEntry = sizeMap.get(size);
         if (stockEntry) return stockEntry;
@@ -188,7 +210,21 @@ export default function ProductScreen() {
                 });
             }
         }
-    }
+    };
+
+    const handleWishlistPress = () => {
+        try {
+            if (!isWishlisted) {
+                // add insert logic
+                setIsWishlisted(true);
+            } else {
+                // add delete logic
+                setIsWishlisted(false);
+            }
+        } catch (err) {
+            console.error('Error wishlisting item:', err);
+        }
+    };
 
     // loading spinner
     if (loading) {
@@ -214,7 +250,7 @@ export default function ProductScreen() {
                         }]}>
                         {selectedSize.stock > 3
                             ? 'In Stock'
-                            : selectedSize.stock === 0
+                            : selectedSize.stock <= 0   // negative values to account for improper inventory tracking
                                 ? 'Out of stock'
                                 : `Only ${selectedSize.stock} left!`
                         }
@@ -264,32 +300,69 @@ export default function ProductScreen() {
                 style={styles.scrollViewContainer}
                 contentContainerStyle={{ paddingBottom: 90 }} // padding to prevent floating panel from blocking content under
             >
-                <Pressable
+                <TopBar title='' hasSearch={false} hasBackButton={true} style={{ marginVertical: 8 }} />
+                {/* <Pressable
                     onPress={() => router.back()}
                     style={styles.backButtonContainer}
                 >
                     <Ionicons name="chevron-back" style={styles.backButton} size={24} />
-                </Pressable>
-                <View style={styles.imageContainer}>
+                </Pressable> */}
+
+                {/* <View style={styles.imageContainer}>
                     {firstUrl ? (
-                        <Image source={{ uri: firstUrl }} style={styles.image} resizeMode='cover' />
+                        <Image source={{ uri: firstUrl }} style={styles.image} />
                     ) : (
                         <Ionicons name="image-outline" size={60} color={Colors.light.gray} />
                     )}
-                </View>
+                </View> */}
+
+                {product?.image_urls?.length
+                    ? <ImageCarousel images={product.image_urls} height={520} />
+                    : (
+                        <View style={[styles.imageContainer, { justifyContent: 'center' }]}>
+                            <Ionicons name="image-outline" size={60} color={Colors.light.gray} />
+                        </View>
+                    )
+                }
 
                 <View style={styles.productInfoContainer}>
                     <View style={styles.productHeaderContainer}>
                         <View style={styles.productNameContainer}>
                             <Text style={styles.productName}>{product?.name}</Text>
                         </View>
-                        <Ionicons name="heart-outline" size={32} color={Colors.light.blue} />
+                        <View style={styles.iconButtonContainer}>
+                            {/* wishlist */}
+                            <Pressable onPress={handleWishlistPress}>
+                                <Ionicons
+                                    name={isWishlisted ? "heart" : "heart-outline"}
+                                    size={32}
+                                    color={Colors.light.blue}
+                                    style={styles.iconButton}
+                                />
+                            </Pressable>
+                            {/* share */}
+                            <Ionicons name="share-outline" size={32} color={Colors.light.blue} style={styles.iconButton} />
+                        </View>
                     </View>
                     <View style={styles.tagsRow}>
+                        {isNewItem && (
+                            <View style={styles.tagBox}>
+                                <Ionicons name="sparkles-sharp" size={16} style={styles.tagIcon} />
+                                <Text style={styles.tagText}>
+                                    New
+                                </Text>
+                            </View>
+                        )}
+                        <View style={styles.tagBox}>
+                            <Ionicons name="flame-sharp" size={16} style={styles.tagIcon} />
+                            <Text style={styles.tagText}>
+                                Popular
+                            </Text>
+                        </View>
                         {hasDiscount && (
                             <View style={styles.tagBox}>
-                                <Ionicons name="pricetags-sharp" size={16} style={{ color: '#fff', marginRight: 4 }} />
-                                <Text style={styles.discountPercentText}>
+                                <Ionicons name="pricetags-sharp" size={16} style={styles.tagIcon} />
+                                <Text style={styles.tagText}>
                                     {discountPct * 100}% off
                                 </Text>
                             </View>
@@ -398,6 +471,9 @@ export default function ProductScreen() {
                     <View style={styles.productDescContainer}>
                         <Text style={styles.productDesc}>{product?.description}</Text>
                     </View>
+
+                    <Text style={styles.sectionTitle}>Reviews</Text>
+
                 </View>
             </Animated.ScrollView>
 
@@ -463,15 +539,18 @@ const styles = StyleSheet.create({
 
     // image
     imageContainer: {
-        flex: 1,
+        // flex: 1,
+        width: '100%',
         height: 520,
-        overflow: 'hidden',
-        backgroundColor: Colors.light.lightgray,
+        // overflow: 'hidden',
+        backgroundColor: '#000000',
         alignItems: 'center',
         justifyContent: 'center'
     },
     image: {
-        ...StyleSheet.absoluteFillObject,
+        width: '100%',
+        height: '100%',
+        resizeMode: 'contain',
     },
 
     // product info container
@@ -494,15 +573,26 @@ const styles = StyleSheet.create({
         fontFamily: Fonts.semiBold,
     },
 
+    // icon buttons
+    iconButtonContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginLeft: 8,
+    },
+    iconButton: {
+        marginHorizontal: 4,
+    },
+
     // tags
     tagsRow: {
         flexWrap: 'wrap',
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'center',
+        // justifyContent: 'center',
     },
     tagBox: {
-        width: 100,
+        minWidth: 60,
         borderRadius: 3,
         backgroundColor: Colors.light.lightgray,
         padding: 4,
@@ -511,6 +601,15 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
+    },
+    tagText: {
+        fontSize: 16,
+        fontFamily: Fonts.extraBold,
+        color: '#fff',
+    },
+    tagIcon: {
+        color: '#fff',
+        marginRight: 4
     },
 
     // description
@@ -551,11 +650,6 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontFamily: Fonts.semiBold,
         color: Colors.light.lightgray,
-    },
-    discountPercentText: {
-        fontSize: 16,
-        fontFamily: Fonts.extraBold,
-        color: '#fff',
     },
 
     // reviews
