@@ -70,6 +70,7 @@ export default function LoginTextField({
                     style={[styles.textInput, inputStyle]}
                     placeholder={placeholder}
                     autoCapitalize="none"
+                    autoCorrect={false}
                     onFocus={onFocus}
                     onBlur={onBlur}
                     {...typeProps}

@@ -1,11 +1,13 @@
 import 'react-native-url-polyfill/auto';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { SplashScreen, Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { UserProvider, useUser } from './context/UserProvider';
+import { useEffect } from 'react';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -28,13 +30,47 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+      <UserProvider>
+        <SplashController />
+        <RootNavigator />
+      </UserProvider>
+    </ThemeProvider>
+  );
+};
+
+function SplashController() {
+  const { loading } = useUser();
+
+  useEffect(() => {
+    if (!loading) {
+      // move user to login screen
+      SplashScreen.hideAsync()
+    }
+  }, [loading]);
+
+  return null;
+};
+
+// show login in screen when not signed in upon app initialization
+function RootNavigator() {
+  const { user } = useUser();
+
+  return (
+    <>
       <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="product" options={{ headerShown: false }} />
-        <Stack.Screen name="login" options={{ headerShown: false }} />
+        {/* only mount screens if user is logged in */}
+        <Stack.Protected guard={!!user}>
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="product" options={{ headerShown: false }} />
+        </Stack.Protected>
+
+        {/* user is signed out */}
+        <Stack.Protected guard={!user}>
+          <Stack.Screen name="auth" options={{ headerShown: false }} />
+        </Stack.Protected>
         <Stack.Screen name="+not-found" />
       </Stack>
       <StatusBar style="auto" />
-    </ThemeProvider>
-  );
-}
+    </>
+  )
+};

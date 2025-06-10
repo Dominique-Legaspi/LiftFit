@@ -3,13 +3,50 @@ import { Colors } from '@/constants/Colors'
 import { Fonts } from '@/constants/Fonts'
 import { useRouter } from 'expo-router'
 import React, { useState } from 'react'
-import { Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, Alert, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native'
+import { supabase } from '../lib/supabase'
 
-export default function ResetPasswordScreen() {
+export default function ForgotPasswordScreen() {
     const router = useRouter();
 
-    const [password, setPassword] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState('');
+    const [email, setEmail] = useState('');
+    const [loading, setLoading] = useState<boolean>(false);
+
+    const handleSubmit = async () => {
+        if (!email.trim()) {
+            return Alert.alert("Email field required");
+        }
+
+        setLoading(true);
+
+        try {
+            const { data, error } = await supabase.auth.resetPasswordForEmail(email.trim());
+
+            if (error) {
+                console.error("Error sending email for password reset:", error);
+                return;
+            }
+
+            // route to login screen
+            Alert.alert(
+                'Email sent',
+                'If that email is registered, you will receive password reset instructions shortly.',
+                [{ text: 'OK', onPress: () => router.replace('/auth/login') }]
+            )
+        } catch (err) {
+            console.error("Error sending password reset:", err);
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    if (loading) {
+        return (
+            <SafeAreaView style={styles.center}>
+                <ActivityIndicator size="large" color={Colors.light.blue} />
+            </SafeAreaView>
+        )
+    }
 
     return (
         <SafeAreaView style={styles.container}>
@@ -28,38 +65,37 @@ export default function ResetPasswordScreen() {
                 {/* input fields */}
                 <View style={styles.textFieldsContainer}>
                     <LoginTextField
-                        value={password}
-                        onChangeText={setPassword}
-                        title="Password"
-                        placeholder="Enter password"
-                        icon="lock-closed-outline"
-                        inputType="password"
-                    />
-                    <LoginTextField
-                        value={confirmPassword}
-                        onChangeText={setConfirmPassword}
-                        title="Confirm password"
-                        placeholder="Confirm password"
-                        icon="lock-closed-outline"
-                        inputType="password"
+                        value={email}
+                        onChangeText={setEmail}
+                        title="Email"
+                        placeholder="Enter email address"
+                        icon="mail-outline"
+                        inputType="email"
                     />
                 </View>
 
                 <View style={styles.buttonContainer}>
                     <Pressable
+                        onPress={handleSubmit}
                         style={styles.buttonBox}
+                        disabled={loading}
                     >
-                        <Text style={styles.buttonText}>
-                            Reset Password
-                        </Text>
+                        {loading
+                            ? <ActivityIndicator size="small" color="#fff" />
+                            : (
+                                <Text style={styles.buttonText}>
+                                    Submit
+                                </Text>
+                            )
+                        }
                     </Pressable>
 
                     <Pressable
-                        onPress={() => router.replace('/login/login')}
+                        onPress={() => router.replace('/auth/login')}
                         style={styles.textContainer}
                     >
                         <Text style={[styles.textStyle, { color: Colors.light.gray }]}>
-                            Return to <Text style={{ color: Colors.light.blue }}>Login</Text>
+                            Remembered your password? <Text style={{ color: Colors.light.blue }}>Login</Text>
                         </Text>
                     </Pressable>
                 </View>
@@ -69,6 +105,11 @@ export default function ResetPasswordScreen() {
 };
 
 const styles = StyleSheet.create({
+    center: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center'
+    },
     container: {
         flex: 1,
         backgroundColor: '#fff',

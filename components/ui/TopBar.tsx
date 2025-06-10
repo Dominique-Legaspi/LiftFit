@@ -54,9 +54,9 @@ export default function TopBar({ title = 'LIFTFIT', icon, value = '', onChangeTe
 
                 {/* top bar notifications + cart */}
                 <View style={styles.topBarButtonsContainer}>
-                    <Pressable style={styles.topBarButtons}>
+                    {/* <Pressable style={styles.topBarButtons}>
                         <Ionicons name="notifications-outline" size={28} />
-                    </Pressable>
+                    </Pressable> */}
                     <Pressable style={styles.topBarButtons}>
                         <Ionicons name="cart-outline" size={28} />
                     </Pressable>

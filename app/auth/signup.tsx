@@ -99,7 +99,7 @@ export default function SignUpScreen() {
             Alert.alert(
                 'Check your email',
                 'A confirmation link has been sent. Please verify and then log in.',
-                [{ text: 'OK', onPress: () => router.replace('/login/login') }]
+                [{ text: 'OK', onPress: () => router.replace('/auth/login') }]
             );
 
         } catch (err: any) {
@@ -107,6 +107,14 @@ export default function SignUpScreen() {
         } finally {
             setLoading(false);
         }
+    }
+
+    if (loading) {
+        return (
+            <SafeAreaView style={styles.center}>
+                <ActivityIndicator size="large" color={Colors.light.blue} />
+            </SafeAreaView>
+        )
     }
 
     return (
@@ -189,7 +197,7 @@ export default function SignUpScreen() {
                     </Pressable>
                 </View>
                 <Pressable
-                    onPress={() => router.replace('/login/login')}
+                    onPress={() => router.replace('/auth/login')}
                     style={styles.existingAccountContainer}
                 >
                     <Text style={styles.existingAccountText}>
@@ -202,6 +210,11 @@ export default function SignUpScreen() {
 };
 
 const styles = StyleSheet.create({
+    center: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center'
+    },
     container: {
         flex: 1,
         backgroundColor: '#fff',

@@ -2,43 +2,81 @@ import LoginTextField from '@/components/ui/LoginTextField'
 import { Colors } from '@/constants/Colors'
 import { Fonts } from '@/constants/Fonts'
 import { useRouter } from 'expo-router'
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { ActivityIndicator, Alert, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native'
 import { supabase } from '../lib/supabase'
 
-export default function LoginScreen() {
+export default function ResetPasswordScreen() {
     const router = useRouter();
 
-    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
 
     const [loading, setLoading] = useState<boolean>(false);
 
-    const handleLogin = async () => {
-        if (!email || !password) {
-            return Alert.alert("Email and password fields required.")
+    const [linkValid, setLinkValid] = useState(false)
+
+
+    useEffect(() => {
+        // Listen for the PASSWORD_RECOVERY event
+        const { data: listener } = supabase.auth.onAuthStateChange((event) => {
+            if (event === 'PASSWORD_RECOVERY') {
+                setLinkValid(true)
+            }
+            setLoading(false)
+        })
+        // Clean up listener on unmount
+        return () => listener.subscription?.unsubscribe()
+    }, [])
+
+    const handleSubmit = async () => {
+        if (!password || !confirmPassword) {
+            return Alert.alert("All fields required.");
+        }
+
+        if (!password !== !confirmPassword) {
+            return Alert.alert("Passwords do not match");
         }
 
         setLoading(true);
+
         try {
-            const { data, error } = await supabase.auth.signInWithPassword({
-                email: email.trim(),
-                password
-            });
+            const { data, error } = await supabase.auth.updateUser({ password: password });
 
             if (error) {
-                console.error("Login failed:", error);
+                console.error("Error resetting password:", error);
                 return;
             }
 
-            // route to home screen
-            router.replace('/');
+            Alert.alert(
+                'Success',
+                'Your password has been updated.',
+                [{ text: 'OK', onPress: () => router.replace('/auth/login') }]
+            );
 
         } catch (err) {
-            console.error("Error logging in:", err);
+            console.error("Error resetting password");
         } finally {
             setLoading(false);
         }
+    }
+
+    if (loading) {
+        return (
+            <SafeAreaView style={styles.center}>
+                <ActivityIndicator size="large" color={Colors.light.blue} />
+            </SafeAreaView>
+        )
+    }
+
+    if (!linkValid) {
+        return (
+            <SafeAreaView style={styles.center}>
+                <Text style={styles.errorText}>
+                    That password-reset link is invalid or expired.
+                </Text>
+            </SafeAreaView>
+        )
     }
 
     return (
@@ -58,18 +96,18 @@ export default function LoginScreen() {
                 {/* input fields */}
                 <View style={styles.textFieldsContainer}>
                     <LoginTextField
-                        value={email}
-                        onChangeText={setEmail}
-                        title="Email"
-                        placeholder="Enter email address"
-                        icon="mail-outline"
-                        inputType="email"
-                    />
-                    <LoginTextField
                         value={password}
                         onChangeText={setPassword}
-                        title="Password"
-                        placeholder="Enter password"
+                        title="New password"
+                        placeholder="Enter new password"
+                        icon="lock-closed-outline"
+                        inputType="password"
+                    />
+                    <LoginTextField
+                        value={confirmPassword}
+                        onChangeText={setConfirmPassword}
+                        title="Confirm password"
+                        placeholder="Confirm password"
                         icon="lock-closed-outline"
                         inputType="password"
                     />
@@ -77,7 +115,7 @@ export default function LoginScreen() {
 
                 <View style={styles.buttonContainer}>
                     <Pressable
-                        onPress={handleLogin}
+                        onPress={handleSubmit}
                         style={styles.buttonBox}
                         disabled={loading}
                     >
@@ -85,35 +123,32 @@ export default function LoginScreen() {
                             ? <ActivityIndicator size="small" color="#fff" />
                             : (
                                 <Text style={styles.buttonText}>
-                                    Login
+                                    Reset Password
                                 </Text>
                             )
                         }
                     </Pressable>
 
                     <Pressable
-                        onPress={() => router.replace('/login/forgot')}
+                        onPress={() => router.replace('/auth/login')}
                         style={styles.textContainer}
                     >
                         <Text style={[styles.textStyle, { color: Colors.light.gray }]}>
-                            Forgot password?
+                            Return to <Text style={{ color: Colors.light.blue }}>Login</Text>
                         </Text>
                     </Pressable>
                 </View>
-                <Pressable
-                    onPress={() => router.replace('/login/signup')}
-                    style={styles.textContainer}
-                >
-                    <Text style={styles.textStyle}>
-                        Don't have an account? <Text style={{ color: Colors.light.blue }}>Sign up</Text>
-                    </Text>
-                </Pressable>
             </View>
         </SafeAreaView>
     )
 };
 
 const styles = StyleSheet.create({
+    center: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center'
+    },
     container: {
         flex: 1,
         backgroundColor: '#fff',
@@ -174,6 +209,13 @@ const styles = StyleSheet.create({
     textStyle: {
         fontSize: 16,
         fontFamily: Fonts.regular,
+    },
+
+    errorText: {
+        color: '#ff0000',
+        fontSize: 16,
+        textAlign: 'center',
+        paddingHorizontal: 20,
     },
 
 })

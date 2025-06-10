@@ -3,12 +3,51 @@ import { Colors } from '@/constants/Colors'
 import { Fonts } from '@/constants/Fonts'
 import { useRouter } from 'expo-router'
 import React, { useState } from 'react'
-import { Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, Alert, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native'
+import { supabase } from '../lib/supabase'
 
-export default function ForgotPasswordScreen() {
+export default function LoginScreen() {
     const router = useRouter();
 
     const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+
+    const [loading, setLoading] = useState<boolean>(false);
+
+    const handleLogin = async () => {
+        if (!email || !password) {
+            return Alert.alert("Email and password fields required.")
+        }
+
+        setLoading(true);
+        try {
+            const { data, error } = await supabase.auth.signInWithPassword({
+                email: email.trim(),
+                password
+            });
+
+            if (error) {
+                console.error("Login failed:", error);
+                return;
+            }
+
+            // route to home screen
+            router.replace('/');
+
+        } catch (err) {
+            console.error("Error logging in:", err);
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    if (loading) {
+        return (
+            <SafeAreaView style={styles.center}>
+                <ActivityIndicator size="large" color={Colors.light.blue} />
+            </SafeAreaView>
+        )
+    }
 
     return (
         <SafeAreaView style={styles.container}>
@@ -34,32 +73,60 @@ export default function ForgotPasswordScreen() {
                         icon="mail-outline"
                         inputType="email"
                     />
+                    <LoginTextField
+                        value={password}
+                        onChangeText={setPassword}
+                        title="Password"
+                        placeholder="Enter password"
+                        icon="lock-closed-outline"
+                        inputType="password"
+                    />
                 </View>
 
                 <View style={styles.buttonContainer}>
                     <Pressable
+                        onPress={handleLogin}
                         style={styles.buttonBox}
+                        disabled={loading}
                     >
-                        <Text style={styles.buttonText}>
-                            Submit
-                        </Text>
+                        {loading
+                            ? <ActivityIndicator size="small" color="#fff" />
+                            : (
+                                <Text style={styles.buttonText}>
+                                    Login
+                                </Text>
+                            )
+                        }
                     </Pressable>
 
                     <Pressable
-                        onPress={() => router.replace('/login/login')}
+                        onPress={() => router.replace('/auth/forgot')}
                         style={styles.textContainer}
                     >
                         <Text style={[styles.textStyle, { color: Colors.light.gray }]}>
-                            Remembered your password? <Text style={{ color: Colors.light.blue }}>Login</Text>
+                            Forgot password?
                         </Text>
                     </Pressable>
                 </View>
+                <Pressable
+                    onPress={() => router.replace('/auth/signup')}
+                    style={styles.textContainer}
+                >
+                    <Text style={styles.textStyle}>
+                        Don't have an account? <Text style={{ color: Colors.light.blue }}>Sign up</Text>
+                    </Text>
+                </Pressable>
             </View>
         </SafeAreaView>
     )
 };
 
 const styles = StyleSheet.create({
+    center: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center'
+    },
     container: {
         flex: 1,
         backgroundColor: '#fff',
