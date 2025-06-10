@@ -5,11 +5,10 @@ import { useRouter } from 'expo-router'
 import React, { useState } from 'react'
 import { Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native'
 
-export default function LoginScreen() {
+export default function ForgotPasswordScreen() {
     const router = useRouter();
 
     const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
 
     return (
         <SafeAreaView style={styles.container}>
@@ -35,14 +34,6 @@ export default function LoginScreen() {
                         icon="mail-outline"
                         inputType="email"
                     />
-                    <LoginTextField
-                        value={password}
-                        onChangeText={setPassword}
-                        title="Password"
-                        placeholder="Enter password"
-                        icon="lock-closed-outline"
-                        inputType="password"
-                    />
                 </View>
 
                 <View style={styles.buttonContainer}>
@@ -50,27 +41,19 @@ export default function LoginScreen() {
                         style={styles.buttonBox}
                     >
                         <Text style={styles.buttonText}>
-                            Login
+                            Submit
                         </Text>
                     </Pressable>
 
                     <Pressable
-                        onPress={() => router.replace('/login/forgot')}
+                        onPress={() => router.replace('/login/login')}
                         style={styles.textContainer}
                     >
                         <Text style={[styles.textStyle, { color: Colors.light.gray }]}>
-                            Forgot password?
+                            Remembered your password? <Text style={{ color: Colors.light.blue }}>Login</Text>
                         </Text>
                     </Pressable>
                 </View>
-                <Pressable
-                    onPress={() => router.replace('/login/signup')}
-                    style={styles.textContainer}
-                >
-                    <Text style={styles.textStyle}>
-                        Don't have an account? <Text style={{ color: Colors.light.blue }}>Sign up</Text>
-                    </Text>
-                </Pressable>
             </View>
         </SafeAreaView>
     )

@@ -6,7 +6,10 @@ import { InputModeOptions, Pressable, StyleSheet, Text, TextInput, TextInputProp
 
 export type TextFieldType = 'text' | 'email' | 'password' | 'number' | 'phone' | 'url';
 
-type LoginProps = {
+type LoginProps = Omit<
+    TextInputProps,
+    'value' | 'onChangeText' | 'style'
+> & {
     value: string;
     onChangeText: (text: string) => void;
     inputType?: TextFieldType;
@@ -26,6 +29,8 @@ export default function LoginTextField({
     icon = 'mail-outline',
     containerStyle,
     inputStyle,
+    onFocus,
+    onBlur,
     ...rest
 }: LoginProps) {
     const [showPassword, setShowPassword] = useState<boolean>(false);
@@ -65,16 +70,18 @@ export default function LoginTextField({
                     style={[styles.textInput, inputStyle]}
                     placeholder={placeholder}
                     autoCapitalize="none"
+                    onFocus={onFocus}
+                    onBlur={onBlur}
                     {...typeProps}
                     {...rest}
                 />
                 {inputType === 'password' && (
-                        <Pressable
-                            onPress={() => setShowPassword(prev => !prev)}
-                        >
-                            <Ionicons name={showPassword ? "eye" : "eye-off"} size={28} style={styles.showHideIcon} />
-                        </Pressable>
-                    )}
+                    <Pressable
+                        onPress={() => setShowPassword(prev => !prev)}
+                    >
+                        <Ionicons name={showPassword ? "eye-outline" : "eye-off-outline"} size={28} style={styles.showHideIcon} />
+                    </Pressable>
+                )}
             </Pressable>
             <Text style={styles.textInputDesc}>{title}</Text>
         </View>
@@ -87,7 +94,7 @@ const styles = StyleSheet.create({
         marginVertical: 5,
     },
     textInputBox: {
-        padding: 12,
+        paddingVertical: 8,
         flexDirection: 'row',
         borderBottomWidth: 1,
         borderBottomColor: Colors.light.blue,
@@ -104,13 +111,13 @@ const styles = StyleSheet.create({
     },
     textInput: {
         flex: 1,
-        fontSize: 14,
+        fontSize: 16,
         color: Colors.light.blue,
         outlineWidth: 0,
     },
     textInputDesc: {
         marginTop: 4,
-        marginLeft: 12,
+        marginLeft: 8,
         fontSize: 16,
         fontFamily: Fonts.regular,
     },

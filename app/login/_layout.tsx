@@ -1,6 +1,6 @@
 import { Stack } from 'expo-router';
 
-export default function ProductLayout() {
+export default function UserLoginLayout() {
   return (
     <Stack>
       <Stack.Screen
@@ -11,6 +11,18 @@ export default function ProductLayout() {
       />
       <Stack.Screen
         name="signup"
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="forgot"
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="reset"
         options={{
           headerShown: false,
         }}

@@ -5,11 +5,11 @@ import { useRouter } from 'expo-router'
 import React, { useState } from 'react'
 import { Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native'
 
-export default function LoginScreen() {
+export default function ResetPasswordScreen() {
     const router = useRouter();
 
-    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
 
     return (
         <SafeAreaView style={styles.container}>
@@ -28,18 +28,18 @@ export default function LoginScreen() {
                 {/* input fields */}
                 <View style={styles.textFieldsContainer}>
                     <LoginTextField
-                        value={email}
-                        onChangeText={setEmail}
-                        title="Email"
-                        placeholder="Enter email address"
-                        icon="mail-outline"
-                        inputType="email"
-                    />
-                    <LoginTextField
                         value={password}
                         onChangeText={setPassword}
                         title="Password"
                         placeholder="Enter password"
+                        icon="lock-closed-outline"
+                        inputType="password"
+                    />
+                    <LoginTextField
+                        value={confirmPassword}
+                        onChangeText={setConfirmPassword}
+                        title="Confirm password"
+                        placeholder="Confirm password"
                         icon="lock-closed-outline"
                         inputType="password"
                     />
@@ -50,27 +50,19 @@ export default function LoginScreen() {
                         style={styles.buttonBox}
                     >
                         <Text style={styles.buttonText}>
-                            Login
+                            Reset Password
                         </Text>
                     </Pressable>
 
                     <Pressable
-                        onPress={() => router.replace('/login/forgot')}
+                        onPress={() => router.replace('/login/login')}
                         style={styles.textContainer}
                     >
                         <Text style={[styles.textStyle, { color: Colors.light.gray }]}>
-                            Forgot password?
+                            Return to <Text style={{ color: Colors.light.blue }}>Login</Text>
                         </Text>
                     </Pressable>
                 </View>
-                <Pressable
-                    onPress={() => router.replace('/login/signup')}
-                    style={styles.textContainer}
-                >
-                    <Text style={styles.textStyle}>
-                        Don't have an account? <Text style={{ color: Colors.light.blue }}>Sign up</Text>
-                    </Text>
-                </Pressable>
             </View>
         </SafeAreaView>
     )
