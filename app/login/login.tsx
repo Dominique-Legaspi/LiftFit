@@ -3,13 +3,43 @@ import { Colors } from '@/constants/Colors'
 import { Fonts } from '@/constants/Fonts'
 import { useRouter } from 'expo-router'
 import React, { useState } from 'react'
-import { Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, Alert, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native'
+import { supabase } from '../lib/supabase'
 
 export default function LoginScreen() {
     const router = useRouter();
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+
+    const [loading, setLoading] = useState<boolean>(false);
+
+    const handleLogin = async () => {
+        if (!email || !password) {
+            return Alert.alert("Email and password fields required.")
+        }
+
+        setLoading(true);
+        try {
+            const { data, error } = await supabase.auth.signInWithPassword({
+                email: email.trim(),
+                password
+            });
+
+            if (error) {
+                console.error("Login failed:", error);
+                return;
+            }
+
+            // route to home screen
+            router.replace('/');
+
+        } catch (err) {
+            console.error("Error logging in:", err);
+        } finally {
+            setLoading(false);
+        }
+    }
 
     return (
         <SafeAreaView style={styles.container}>
@@ -47,11 +77,18 @@ export default function LoginScreen() {
 
                 <View style={styles.buttonContainer}>
                     <Pressable
+                        onPress={handleLogin}
                         style={styles.buttonBox}
+                        disabled={loading}
                     >
-                        <Text style={styles.buttonText}>
-                            Login
-                        </Text>
+                        {loading
+                            ? <ActivityIndicator size="small" color="#fff" />
+                            : (
+                                <Text style={styles.buttonText}>
+                                    Login
+                                </Text>
+                            )
+                        }
                     </Pressable>
 
                     <Pressable
