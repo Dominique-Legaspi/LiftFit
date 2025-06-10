@@ -37,7 +37,7 @@ export default function LoginTextField({
             typeProps.textContentType = 'emailAddress';
             break;
         case 'password':
-            typeProps.secureTextEntry = showPassword;
+            typeProps.secureTextEntry = !showPassword;
             typeProps.textContentType = 'password';
             break;
         case 'number':
@@ -69,20 +69,12 @@ export default function LoginTextField({
                     {...rest}
                 />
                 {inputType === 'password' && (
-                    !showPassword ? (
                         <Pressable
-                            onPress={() => setShowPassword(true)}
+                            onPress={() => setShowPassword(prev => !prev)}
                         >
-                            <Ionicons name="eye" size={28} style={styles.showHideIcon} />
+                            <Ionicons name={showPassword ? "eye" : "eye-off"} size={28} style={styles.showHideIcon} />
                         </Pressable>
-                    ) : (
-                        <Pressable
-                            onPress={() => setShowPassword(false)}
-                        >
-                            <Ionicons name="eye-off" size={28} style={styles.showHideIcon} />
-                        </Pressable>
-                    )
-                )}
+                    )}
             </Pressable>
             <Text style={styles.textInputDesc}>{title}</Text>
         </View>

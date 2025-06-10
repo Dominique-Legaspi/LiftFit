@@ -23,6 +23,7 @@ export default function LoginScreen() {
                         Wear stylish, breathable activewear.
                     </Text>
                 </View>
+                
 
                 {/* input fields */}
                 <View style={styles.textFieldsContainer}>
