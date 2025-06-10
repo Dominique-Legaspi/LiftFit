@@ -135,14 +135,14 @@ export default function BrowseScreen() {
       id: 1,
       name: 'Shop All',
       image: require('../../../assets/images/browse_all.png'),
-      onPress: () => router.push('/browse/shop'),
+      onPress: () => router.push('/browse/shop' as any),
     },
     {
       id: 2,
       name: 'Shop Men',
       image: require('../../../assets/images/browse_men.png'),
       onPress: () => router.push({
-        pathname: '/browse/shop',
+        pathname: '/browse/shop'  as any,
         params: { gender: 'Men' },
       }),
     },
@@ -151,7 +151,7 @@ export default function BrowseScreen() {
       name: 'Shop Women',
       image: require('../../../assets/images/browse_women.png'),
       onPress: () => router.push({
-        pathname: '/browse/shop',
+        pathname: '/browse/shop'  as any,
         params: { gender: 'Women' },
       }),
     },
@@ -196,7 +196,7 @@ export default function BrowseScreen() {
                   linkText="View all"
                   link={() =>
                     router.push({
-                      pathname: '/browse/shop',
+                      pathname: '/browse/shop' as any,
                       params: { category_id: category.id  },
                     })
                   }
@@ -212,7 +212,7 @@ export default function BrowseScreen() {
                       style={[styles.categoryLabel, isLast && { borderBottomWidth: 0 }]}
                       onPress={() =>
                         router.push({
-                          pathname: '/browse/shop',
+                          pathname: '/browse/shop'  as any,
                           params: { type_id: type.id },
                         })
                       }
