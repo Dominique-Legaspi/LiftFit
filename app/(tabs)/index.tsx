@@ -158,7 +158,8 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.container}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        style={[styles.scrollViewContainer, { marginBottom: 60 }]}
+        style={styles.scrollViewContainer}
+        contentContainerStyle={{ paddingBottom: 80 }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}

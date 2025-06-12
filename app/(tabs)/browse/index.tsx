@@ -159,7 +159,10 @@ export default function BrowseScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollViewContainer}>
+      <ScrollView
+        style={styles.scrollViewContainer}
+        contentContainerStyle={{ paddingBottom: 80 }}  
+      >
         <TopBar title="browse" icon="search-outline" value={searchQuery} onChangeText={setSearchQuery} />
 
         <View style={styles.browseCardContainer}>
@@ -237,7 +240,6 @@ const styles = StyleSheet.create({
   },
   scrollViewContainer: {
     paddingVertical: 10,
-    marginBottom: 60
   },
   loadingContainer: {
     flex: 1,

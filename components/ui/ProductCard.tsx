@@ -1,5 +1,6 @@
 import { Colors } from "@/constants/Colors";
 import { Fonts } from "@/constants/Fonts";
+import { useWishlist } from "@/hooks/useWishlist";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
@@ -33,6 +34,11 @@ const ProductCard: React.FC<ProductCardProps> = ({
     textStyle,
 }) => {
     const router = useRouter();
+
+    // handle wishlist
+    const { isWishlisted, toggleWishlist } = useWishlist({
+        productId: product.id,
+    });
 
     const [imageLoaded, setImageLoaded] = useState<boolean>(false);
     const opacity = useRef(new Animated.Value(0)).current;
@@ -115,13 +121,16 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 </View>
             )}
 
-            <View style={[styles.wishlistButton, styles.buttonContainer]}>
+            <Pressable
+                onPress={toggleWishlist}
+                style={[styles.wishlistButton, styles.buttonContainer]}
+            >
                 <Ionicons
-                    name="heart-outline"
+                    name={isWishlisted ? "heart" : "heart-outline"}
                     size={24}
                     style={{ color: Colors.light.blue }}
                 />
-            </View>
+            </Pressable>
 
             <View style={styles.textContainer}>
                 <Text style={[styles.productName, textStyle]} numberOfLines={2}>

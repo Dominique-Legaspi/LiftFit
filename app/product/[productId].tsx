@@ -1,12 +1,14 @@
 import { Colors } from '@/constants/Colors';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, Dimensions, Image, NativeScrollEvent, NativeSyntheticEvent, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { supabase } from '@/app/lib/supabase';
+import { ActivityIndicator, Animated, Dimensions, FlatList, Image, Modal, NativeScrollEvent, NativeSyntheticEvent, Pressable, SafeAreaView, ScrollView, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
+import { SUPABASE_URL, supabase } from '@/app/lib/supabase';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Fonts } from '@/constants/Fonts';
 import TopBar from '@/components/ui/TopBar';
 import { ImageCarousel } from '@/components/ui/ImageCarousel';
+import StarRating from '@/components/ui/StarRating';
+import { useWishlist } from '@/hooks/useWishlist';
 
 export const options = {
     headerShown: false,
@@ -43,18 +45,52 @@ type ProductStock = {
     stock: number;
 }
 
+type ProductReviews = {
+    id: string;
+    profile_id: string;
+    product_id: string;
+    rating: number;
+    value: number;
+    quality: number;
+    comfort: number;
+    sizing: number;
+    aesthetic: number;
+    comment: string;
+    image_urls?: string[];
+    created_at: string;
+    profiles: { username: string; avatar_url: string; }
+}
+
+type ReviewCardProps = {
+    review: ProductReviews;
+    onImagePress: (uri: string) => void;
+    containerStyle?: StyleProp<ViewStyle>;
+}
+
 export default function ProductScreen() {
+    // product
     const { productId } = useLocalSearchParams<{ productId: string }>();
     const [product, setProduct] = useState<Product | null>(null);
 
+    // product color and size
     const [productColors, setProductColors] = useState<ProductColor[]>([]);
     const [productStocks, setProductStocks] = useState<ProductStock[]>([]);
-
     const [selectedColor, setSelectedColor] = useState<ProductColor | null>(null);
     const [selectedSize, setSelectedSize] = useState<ProductStock | null>(null);
 
-    const [isWishlisted, setIsWishlisted] = useState<boolean>(false);
+    // handle wishlist
+    const { isWishlisted, toggleWishlist } = useWishlist({
+        productId,
+        productColorId: selectedColor?.id ?? '',
+        productStockId: selectedSize?.id ?? '',
+    });
+
+    // new item tag
     const [isNewItem, setIsNewItem] = useState<boolean>(false);
+
+    // reviews
+    const [reviews, setReviews] = useState<ProductReviews[]>([]);
+    const [modalUri, setModalUri] = useState<string | null>(null);
 
     const [loading, setLoading] = useState<boolean>(false);
 
@@ -134,10 +170,66 @@ export default function ProductScreen() {
         fetchProductStock();
     }, [productId]);
 
-    // set image if only one image
-    const firstUrl = product?.image_urls && product?.image_urls.length > 0
-        ? product?.image_urls[0]
-        : null;
+    // define public bucket url 
+    const REVIEW_IMAGES_BASE =
+        `${SUPABASE_URL}/storage/v1/object/public/review-images/`;
+
+    // helper to safely encode path segments
+    function encodePath(path: string) {
+        return path.split('/').map(encodeURIComponent).join('/')
+    }
+
+    // fetch reviews
+    async function fetchReviews() {
+        if (!productId) return;
+
+        setLoading(true);
+        try {
+            const { data, error } = await supabase
+                .from('reviews')
+                .select(`
+                    *,
+                    profiles(username, avatar_url)
+                    `)
+                .eq('product_id', productId)
+                .order('rating', { ascending: false })
+                .limit(5);
+
+            if (error) throw error;
+
+            const reviews = (data ?? []) as ProductReviews[];
+
+            if (!reviews) {
+                setReviews([]);
+                return;
+            }
+
+            // map image_urls
+            // ensures zero storage-API metadata calls to reduce duplicated API calls
+            const withUrls = reviews.map((r) => ({
+                ...r,
+                image_urls: r.image_urls?.map((x) => {
+                    // if it's already a URL, just use it
+                    if (x.startsWith('http')) return x
+                    // otherwise assume it's a storage-key and build public URL
+                    return `${REVIEW_IMAGES_BASE}${encodePath(x)}`
+                }) ?? []
+            }))
+
+            setReviews(withUrls);
+
+            // setReviews(data);
+
+        } catch (err) {
+            console.error("Error fetching reviews:", err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchReviews();
+    }, [productId])
 
     // determine if new item
     const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
@@ -212,20 +304,6 @@ export default function ProductScreen() {
         }
     };
 
-    const handleWishlistPress = () => {
-        try {
-            if (!isWishlisted) {
-                // add insert logic
-                setIsWishlisted(true);
-            } else {
-                // add delete logic
-                setIsWishlisted(false);
-            }
-        } catch (err) {
-            console.error('Error wishlisting item:', err);
-        }
-    };
-
     // loading spinner
     if (loading) {
         return (
@@ -294,8 +372,100 @@ export default function ProductScreen() {
         </View>
     )
 
+    const ReviewCard: React.FC<ReviewCardProps> = ({ review, onImagePress, containerStyle }) => {
+        const reviewDate = new Date(review.created_at).toLocaleDateString();
+
+        // set image if only one image
+        const firstUrl = review?.image_urls && review?.image_urls.length > 0
+            ? review?.image_urls[0]
+            : null;
+
+        return (
+            <View style={[styles.reviewCard, containerStyle]}>
+                {/* user info, avatar, and date */}
+                <View style={styles.reviewUserInfo}>
+                    <View style={{ flexDirection: 'row' }}>
+                        <Image source={{ uri: review.profiles.avatar_url }} style={styles.reviewAvatar} />
+
+                        <View style={{ flexDirection: 'column' }}>
+                            <Text style={styles.reviewUsername}>{review.profiles.username}</Text>
+                            <StarRating
+                                average={review.rating}
+                                size={16}
+                                fullColor={Colors.light.blue}
+                                emptyColor={Colors.light.blue}
+                            />
+                        </View>
+                    </View>
+                    <Text style={styles.reviewDate}>{reviewDate}</Text>
+                </View>
+                {/* review images */}
+                {review.image_urls && review.image_urls?.length > 1 && (
+                    <FlatList
+                        data={review.image_urls}
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        keyExtractor={(uri) => uri}
+                        renderItem={({ item }) => (
+                            <Pressable
+                                onPress={() => onImagePress(item)}
+                            >
+                                <Image
+                                    source={{ uri: item }}
+                                    style={styles.reviewImages}
+                                    onError={({ nativeEvent }) =>
+                                        console.warn('Image load error', item, nativeEvent.error)
+                                    }
+                                />
+                            </Pressable>
+                        )}
+                        contentContainerStyle={styles.reviewImagesContainer}
+                    />
+                )}
+                {/* review comment */}
+                <View style={[
+                    styles.reviewCommentContainer,
+                    firstUrl ? { flexDirection: 'row', justifyContent: 'space-between' } : undefined]}
+                >
+                    <Text style={styles.reviewComment}>{review.comment}</Text>
+                    {firstUrl && review.image_urls?.length === 1 && (
+                        <Pressable
+                            onPress={() => onImagePress(firstUrl)}
+                            style={{ marginLeft: 4 }}
+                        >
+                            <Image
+                                source={{ uri: firstUrl }}
+                                style={styles.reviewImages}
+                                onError={({ nativeEvent }) =>
+                                    console.warn('Image load error', firstUrl, nativeEvent.error)
+                                }
+                            />
+                        </Pressable>
+                    )}
+                </View>
+            </View>
+        )
+    }
+
     return (
         <SafeAreaView style={styles.container}>
+            {/* full size image view */}
+            <Modal
+                visible={!!modalUri}
+                transparent
+                onRequestClose={() => setModalUri(null)}
+            >
+                <Pressable
+                    style={styles.modalBackground}
+                    onPress={() => setModalUri(null)}
+                >
+                    <Image
+                        source={{ uri: modalUri! }}
+                        style={styles.fullImage}
+                    />
+                </Pressable>
+            </Modal>
+
             <Animated.ScrollView
                 style={styles.scrollViewContainer}
                 contentContainerStyle={{ paddingBottom: 90 }} // padding to prevent floating panel from blocking content under
@@ -332,7 +502,7 @@ export default function ProductScreen() {
                         </View>
                         <View style={styles.iconButtonContainer}>
                             {/* wishlist */}
-                            <Pressable onPress={handleWishlistPress}>
+                            <Pressable onPress={toggleWishlist}>
                                 <Ionicons
                                     name={isWishlisted ? "heart" : "heart-outline"}
                                     size={32}
@@ -473,7 +643,22 @@ export default function ProductScreen() {
                     </View>
 
                     <Text style={styles.sectionTitle}>Reviews</Text>
-
+                    {reviews.length > 0 ?
+                        reviews.map((review, index) => {
+                            const isLast = index === reviews.length - 1;
+                            return (
+                                <ReviewCard
+                                    key={review.id}
+                                    review={review}
+                                    onImagePress={setModalUri}
+                                    containerStyle={isLast ? { borderBottomWidth: 0 } : undefined}
+                                />
+                            )
+                        }) : (
+                            <View style={styles.noReviewsContainer}>
+                                <Text style={styles.noReviews}>Be the first to review this product.</Text>
+                            </View>
+                        )}
                 </View>
             </Animated.ScrollView>
 
@@ -785,5 +970,83 @@ const styles = StyleSheet.create({
         fontFamily: Fonts.semiBold,
         fontSize: 20,
     },
+
+    // reviews
+    reviewCard: {
+        margin: 4,
+        paddingVertical: 8,
+        borderBottomWidth: 1,
+        borderBottomColor: Colors.light.gray + '33',
+    },
+    reviewUserInfo: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+    },
+    reviewUsername: {
+        fontFamily: Fonts.semiBold,
+        fontSize: 14,
+        paddingVertical: 4,
+    },
+    reviewAvatar: {
+        marginRight: 8,
+        alignItems: 'center',
+        width: 40,
+        height: 40,
+        borderRadius: 50,
+    },
+
+    // review images
+    modalBackground: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.8)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    fullImage: {
+        width: '90%',
+        height: '90%',
+        resizeMode: 'contain',
+    },
+    reviewImagesContainer: {
+        marginVertical: 8,
+    },
+    reviewImages: {
+        width: 100,
+        height: 150,
+        marginRight: 4,
+        resizeMode: 'contain',
+    },
+
+    // review comments
+    reviewCommentContainer: {
+        paddingVertical: 8,
+    },
+    reviewComment: {
+        flex: 1,
+        fontSize: 14,
+    },
+    reviewRatingRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    reviewRatingText: {
+        marginLeft: 4,
+        fontSize: 16,
+    },
+    reviewDate: {
+        color: Colors.light.lightgray,
+        fontSize: 14,
+    },
+
+    noReviewsContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 12,
+        marginVertical: 12,
+    },
+    noReviews: {
+        fontSize: 16,
+        fontFamily: Fonts.regular,
+    }
 })
 

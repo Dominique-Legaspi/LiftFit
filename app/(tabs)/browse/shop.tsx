@@ -511,30 +511,30 @@ export default function ShopScreen() {
                     </View>
 
                 ) : (products.length > 0 ? (<FlatList
-                            data={products}
-                            keyExtractor={(item) => item.id}
-                            renderItem={renderProductItem}
-                            horizontal={false}
-                            numColumns={isGrid ? 2 : 1}
-                            showsVerticalScrollIndicator={true}
-                            contentContainerStyle={styles.productsContainer}
-                            columnWrapperStyle={isGrid ? styles.columnWrapper : undefined}
-                            style={{ flex: 1 }}
-                            key={isGrid ? 'GRID' : 'LIST'}
-                            onEndReached={loadMore}
-                            onEndReachedThreshold={0.3}
-                            ListFooterComponent={
-                                loadingMore ? (
-                                    <View style={styles.footerSpinner}>
-                                        <ActivityIndicator size="small" color={Colors.light.blue} />
-                                    </View>
-                                ) : null
-                            }
-                        />) : (
-                        <View style={styles.noProductsContainer}>
-                            <Text style={styles.noProductsText}>No products available.</Text>
-                        </View>
-                    )
+                    data={products}
+                    keyExtractor={(item) => item.id}
+                    renderItem={renderProductItem}
+                    horizontal={false}
+                    numColumns={isGrid ? 2 : 1}
+                    showsVerticalScrollIndicator={true}
+                    contentContainerStyle={styles.productsContainer}
+                    columnWrapperStyle={isGrid ? styles.columnWrapper : undefined}
+                    style={{ flex: 1 }}
+                    key={isGrid ? 'GRID' : 'LIST'}
+                    onEndReached={loadMore}
+                    onEndReachedThreshold={0.3}
+                    ListFooterComponent={
+                        loadingMore ? (
+                            <View style={styles.footerSpinner}>
+                                <ActivityIndicator size="small" color={Colors.light.blue} />
+                            </View>
+                        ) : null
+                    }
+                />) : (
+                    <View style={styles.noProductsContainer}>
+                        <Text style={styles.noProductsText}>No products available.</Text>
+                    </View>
+                )
                 )}
             </View>
 
