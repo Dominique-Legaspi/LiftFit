@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 
 interface UseWishlistParams {
     productId: string,
-    productColorId?: string | null,
+    productColorId: string | null,
     productStockId?: string | null,
 };
 
@@ -29,7 +29,7 @@ export function useWishlist({
                 .from('wishlist')
                 .select('id')
                 .eq('profile_id', profileId)
-                .eq('product_id', productId);
+                .eq('product_id', productId)
 
             // check if color id exists
             if (hasColor) {
@@ -72,7 +72,7 @@ export function useWishlist({
                 .insert({
                     profile_id: profileId,
                     product_id: productId,
-                    product_color_id: hasColor ? productColorId! : null,
+                    product_color_id: productColorId,
                     product_stock_id: hasStock ? productStockId! : null,
                 })
                 .select('id')

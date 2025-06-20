@@ -9,6 +9,7 @@ import TopBar from '@/components/ui/TopBar';
 import { ImageCarousel } from '@/components/ui/ImageCarousel';
 import StarRating from '@/components/ui/StarRating';
 import { useWishlist } from '@/hooks/useWishlist';
+import Loading from '@/components/ui/Loading';
 
 export const options = {
     headerShown: false,
@@ -25,7 +26,6 @@ type Product = {
     type_id?: number;
     style_id?: string;
     gender?: string;
-    image_urls: string[];
     product_styles: { name: string };
     product_types: { name: string };
     product_categories: { name: string };
@@ -36,6 +36,7 @@ type ProductColor = {
     product_id: string;
     color: string;
     hex: string;
+    image_urls?: string[];
 }
 
 type ProductStock = {
@@ -77,6 +78,11 @@ export default function ProductScreen() {
     const [productStocks, setProductStocks] = useState<ProductStock[]>([]);
     const [selectedColor, setSelectedColor] = useState<ProductColor | null>(null);
     const [selectedSize, setSelectedSize] = useState<ProductStock | null>(null);
+
+    // define carousel images
+    const [carouselImages, setCarouselImages] = useState<string[]>([]);
+    const [colorToIndex, setColorToIndex] = useState<Record<string, number>>({});
+    const carouselRef = useRef<FlatList<string>>(null);
 
     // handle wishlist
     const { isWishlisted, toggleWishlist } = useWishlist({
@@ -140,28 +146,43 @@ export default function ProductScreen() {
         setLoading(false);
 
         // set a default color and size on screen entry
+        // if (colorsData.length > 0) {
+        //     // set the first color
+        //     const defaultColor = colorsData[0];
+        //     setSelectedColor(defaultColor);
+
+        //     // set 'M' as default
+        //     const defaultSize = stocksData.find(
+        //         s => s.product_color_id === defaultColor.id && s.size === 'M'
+        //     );
+
+        //     if (defaultSize) {
+        //         setSelectedSize(defaultSize);
+        //     } else {
+        //         // if no M in product_stock, set the stock to 0
+        //         setSelectedSize({
+        //             id: `${defaultColor.id}-M`,
+        //             product_color_id: defaultColor.id,
+        //             size: 'M',
+        //             stock: 0,
+        //         });
+        //     }
+        // };
+
         if (colorsData.length > 0) {
-            // set the first color
             const defaultColor = colorsData[0];
             setSelectedColor(defaultColor);
 
-            // set 'M' as default
             const defaultSize = stocksData.find(
-                s => s.product_color_id === defaultColor.id && s.size === 'M'
+                (s) => s.product_color_id === defaultColor.id && s.size === 'M'
             );
 
             if (defaultSize) {
                 setSelectedSize(defaultSize);
             } else {
-                // if no M in product_stock, set the stock to 0
-                setSelectedSize({
-                    id: `${defaultColor.id}-M`,
-                    product_color_id: defaultColor.id,
-                    size: 'M',
-                    stock: 0,
-                });
+                setSelectedSize(null);
             }
-        };
+        }
 
     };
 
@@ -169,6 +190,27 @@ export default function ProductScreen() {
         fetchProduct();
         fetchProductStock();
     }, [productId]);
+
+    // merge product color images
+    useEffect(() => {
+        if (!product) return;
+
+        const colorPairs: { uri: string; colorId: string }[] = productColors.flatMap(c =>
+            (c.image_urls ?? []).map(uri => ({ uri, colorId: c.id }))
+        );
+
+        const allUris = [...colorPairs.map(p => p.uri)];
+        setCarouselImages(allUris);
+
+        const idxMap: Record<string, number> = {};
+        colorPairs.forEach(({ uri, colorId }) => {
+            if (idxMap[colorId] == null) {
+                const idx = allUris.indexOf(uri);
+                if (idx >= 0) idxMap[colorId] = idx;
+            }
+        });
+        setColorToIndex(idxMap);
+    }, [product, productColors]);
 
     // define public bucket url 
     const REVIEW_IMAGES_BASE =
@@ -261,26 +303,41 @@ export default function ProductScreen() {
     const savingsPrice = basePrice - discountPrice;
 
     const SIZE_ORDER = ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL'];
-    const sizeMap = new Map(productStocks
-        .filter((stock) => stock.product_color_id === selectedColor?.id)
-        .map((stock) => [stock.size, stock]));
+    // const sizeMap = new Map(productStocks
+    //     .filter((stock) => stock.product_color_id === selectedColor?.id)
+    //     .map((stock) => [stock.size, stock]));
 
-    // sizes
-    const orderedSizes: ProductStock[] = SIZE_ORDER.map((size) => {
-        const stockEntry = sizeMap.get(size);
-        if (stockEntry) return stockEntry;
+    // // sizes
+    // const orderedSizes: ProductStock[] = SIZE_ORDER.map((size) => {
+    //     const stockEntry = sizeMap.get(size);
+    //     if (stockEntry) return stockEntry;
 
-        // if product size and color does not exist in database, set the stock to 0
-        return {
-            id: `${selectedColor?.id}-${size}`,
-            product_color_id: selectedColor?.id ?? '',
-            size,
-            stock: 0,
-        }
-    })
+    //     // if product size and color does not exist in database, set the stock to 0
+    //     return {
+    //         id: `${selectedColor?.id}-${size}`,
+    //         product_color_id: selectedColor?.id ?? '',
+    //         size,
+    //         stock: 0,
+    //     }
+    // })
+
+    const actualStocks = productStocks.filter(
+        (s) => s.product_color_id === selectedColor?.id
+    );
+
+    const orderedSizes: ProductStock[] = actualStocks.sort(
+        (a, b) =>
+            SIZE_ORDER.indexOf(a.size) - SIZE_ORDER.indexOf(b.size)
+    );
 
     const handleColorSelect = (color: ProductColor) => {
         setSelectedColor(color);
+
+        // scroll to that color’s first image
+        const idx = colorToIndex[color.id];
+        if (idx != null) {
+            carouselRef.current?.scrollToIndex({ index: idx, animated: true });
+        }
 
         // If a size was already chosen, carry its "size string" over to the new color:
         if (selectedSize) {
@@ -294,23 +351,20 @@ export default function ProductScreen() {
                 setSelectedSize(sameSizeUnderNewColor);
             } else {
                 // build a dummy stock row so the UI still highlights that size
-                setSelectedSize({
-                    id: `${color.id}-${selectedSize.size}`,
-                    product_color_id: color.id,
-                    size: selectedSize.size,
-                    stock: 0,
-                });
+                // setSelectedSize({
+                //     id: `${color.id}-${selectedSize.size}`,
+                //     product_color_id: color.id,
+                //     size: selectedSize.size,
+                //     stock: 0,
+                // });
+                setSelectedSize(null);
             }
         }
     };
 
     // loading spinner
     if (loading) {
-        return (
-            <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={Colors.light.blue} />
-            </View>
-        )
+        return <Loading />
     }
 
     const StockPanel = () => (
@@ -344,6 +398,19 @@ export default function ProductScreen() {
             )}
 
             <View style={styles.addToCartContainer}>
+                {/* wishlist */}
+                {/* {selectedColor && selectedSize && selectedSize.stock > 0 && ( */}
+                    <Pressable onPress={toggleWishlist}>
+                        <Ionicons
+                            name={isWishlisted ? "heart" : "heart-outline"}
+                            size={32}
+                            color={Colors.light.blue}
+                            style={styles.iconButton}
+                        />
+                    </Pressable>
+                {/* )} */}
+
+                {/* add to cart */}
                 <Pressable
                     style={[styles.addToCartButton,
                     selectedColor && selectedSize && selectedSize.stock > 0
@@ -486,8 +553,12 @@ export default function ProductScreen() {
                     )}
                 </View> */}
 
-                {product?.image_urls?.length
-                    ? <ImageCarousel images={product.image_urls} height={520} />
+                {carouselImages.length > 0
+                    ? <ImageCarousel
+                        ref={carouselRef}
+                        images={carouselImages}
+                        height={520}
+                    />
                     : (
                         <View style={[styles.imageContainer, { justifyContent: 'center' }]}>
                             <Ionicons name="image-outline" size={60} color={Colors.light.gray} />
@@ -499,17 +570,9 @@ export default function ProductScreen() {
                     <View style={styles.productHeaderContainer}>
                         <View style={styles.productNameContainer}>
                             <Text style={styles.productName}>{product?.name}</Text>
+                            {selectedColor && <Text style={styles.productType}>{selectedColor?.color}</Text>}
                         </View>
                         <View style={styles.iconButtonContainer}>
-                            {/* wishlist */}
-                            <Pressable onPress={toggleWishlist}>
-                                <Ionicons
-                                    name={isWishlisted ? "heart" : "heart-outline"}
-                                    size={32}
-                                    color={Colors.light.blue}
-                                    style={styles.iconButton}
-                                />
-                            </Pressable>
                             {/* share */}
                             <Ionicons name="share-outline" size={32} color={Colors.light.blue} style={styles.iconButton} />
                         </View>
@@ -757,6 +820,11 @@ const styles = StyleSheet.create({
         fontSize: 24,
         fontFamily: Fonts.semiBold,
     },
+    productType: {
+        fontSize: 16,
+        fontFamily: Fonts.regular,
+        color: Colors.light.gray,
+    },
 
     // icon buttons
     iconButtonContainer: {
@@ -913,6 +981,7 @@ const styles = StyleSheet.create({
 
     // stock info
     stockInfoContainer: {
+        flex: 1,
         flexDirection: 'row',
         marginVertical: 8,
         paddingBottom: 24,
@@ -933,7 +1002,7 @@ const styles = StyleSheet.create({
         elevation: 5,
     },
     stockInfo: {
-        width: '50%',
+        width: '40%',
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -944,11 +1013,13 @@ const styles = StyleSheet.create({
 
     // add to cart button
     addToCartContainer: {
-        width: '50%',
+        width: '60%',
+        flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
     },
     addToCartButton: {
+        marginLeft: 16,
         marginVertical: 12,
         flexDirection: 'row',
         alignItems: 'center',

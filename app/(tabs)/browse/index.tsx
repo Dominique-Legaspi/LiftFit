@@ -8,6 +8,7 @@ import { Fonts } from '@/constants/Fonts';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import HorizontalProductList from '@/components/ui/HorizontalProductList';
 import { useRouter } from 'expo-router';
+import Loading from '@/components/ui/Loading';
 
 type Product = {
   id: string;
@@ -122,13 +123,9 @@ export default function BrowseScreen() {
   }, [])
 
   // loading spinner
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={Colors.light.blue} />
-      </View>
-    )
-  }
+      if (loading) {
+          return <Loading />
+      }
 
   const shopAllCategories = [
     {

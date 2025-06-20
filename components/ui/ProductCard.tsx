@@ -4,7 +4,7 @@ import { useWishlist } from "@/hooks/useWishlist";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Animated, Image, ImageStyle, Pressable, StyleProp, StyleSheet, Text, TextStyle, View } from "react-native";
+import { ActivityIndicator, Animated, ImageStyle, Pressable, StyleProp, StyleSheet, Text, TextStyle, View } from "react-native";
 
 export type Product = {
     id: string;
@@ -13,6 +13,10 @@ export type Product = {
     discount?: number;
     image_urls?: string[];
 };
+
+type ProductColor = {
+    id: string;
+}
 
 type ProductCardProps = {
     product: Product;
@@ -34,11 +38,6 @@ const ProductCard: React.FC<ProductCardProps> = ({
     textStyle,
 }) => {
     const router = useRouter();
-
-    // handle wishlist
-    const { isWishlisted, toggleWishlist } = useWishlist({
-        productId: product.id,
-    });
 
     const [imageLoaded, setImageLoaded] = useState<boolean>(false);
     const opacity = useRef(new Animated.Value(0)).current;
@@ -120,17 +119,6 @@ const ProductCard: React.FC<ProductCardProps> = ({
                     />
                 </View>
             )}
-
-            <Pressable
-                onPress={toggleWishlist}
-                style={[styles.wishlistButton, styles.buttonContainer]}
-            >
-                <Ionicons
-                    name={isWishlisted ? "heart" : "heart-outline"}
-                    size={24}
-                    style={{ color: Colors.light.blue }}
-                />
-            </Pressable>
 
             <View style={styles.textContainer}>
                 <Text style={[styles.productName, textStyle]} numberOfLines={2}>

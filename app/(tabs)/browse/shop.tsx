@@ -1,5 +1,5 @@
 import { supabase } from '@/app/lib/supabase';
-import ProductCard from '@/components/ui/ProductCard';
+import ProductCard, { Product } from '@/components/ui/ProductCard';
 import TopBar from '@/components/ui/TopBar';
 import { Colors } from '@/constants/Colors';
 import { Fonts } from '@/constants/Fonts';
@@ -9,26 +9,40 @@ import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Dimensions, FlatList, Modal, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-type Product = {
-    id: string;
-    created_at: string;
-    name: string;
-    price: number;
-    discount?: number;
-    category_id?: number;
-    type_id?: number;
-    style_id?: string;
-    gender?: string;
-    image_urls: string[];
-    product_styles: { name: string };
-    product_types: { name: string };
-    product_categories: { name: string };
-}
+// type Product = {
+//     id: string;
+//     created_at: string;
+//     name: string;
+//     price: number;
+//     discount?: number;
+//     category_id?: number;
+//     type_id?: number;
+//     style_id?: string;
+//     gender?: string;
+//     product_styles: { name: string };
+//     product_types: { name: string };
+//     product_categories: { name: string };
+// }
 
 // for category, type, style fetch
 type ProdCategory = { id: number; name: string };
 type ProdType = { id: number; name: string; category_id: number };
 type ProdStyle = { id: string; name: string };
+type ProdColors = {
+    id: string;
+    color: string;
+    hex: string;
+    image_urls?: string[];
+    products: {
+        id: string;
+        name: string;
+        price: number;
+        discount?: number;
+        product_styles: { name: string };
+        product_types: { name: string };
+        product_categories: { name: string };
+    };
+}
 
 export default function ShopScreen() {
     // read local search params
@@ -42,7 +56,7 @@ export default function ShopScreen() {
     const [searchQuery, setSearchQuery] = useState<string>('');
 
     // product list
-    const [products, setProducts] = useState<Product[]>([]);
+    const [products, setProducts] = useState<ProdColors[]>([]);
     const [isGrid, setIsGrid] = useState<boolean>(true);
 
     // pagination
@@ -148,73 +162,84 @@ export default function ShopScreen() {
 
             // build base query
             let query = supabase
-                .from('products')
+                .from('product_colors')
                 .select(`
                     *,
-                    product_styles (name),
-                    product_types (name),
-                    product_categories (name)   
+                    products (
+                        id,
+                        name,
+                        price,
+                        discount,
+                        category_id,
+                        type_id,
+                        style_id,
+                        gender,
+                        created_at,
+                        product_styles  ( name ),
+                        product_types   ( name ),
+                        product_categories ( name )
+                    )
                 `);
 
             // search filter
             if (searchQuery.trim() !== '') {
-                query = query.ilike('name', `%${searchQuery.trim()}%`);
+                query = query.ilike('products.name', `%${searchQuery.trim()}%`);
             }
 
             // type filter
             if (selectedTypes.length > 0) {
-                query = query.in('type_id', selectedTypes);
+                query = query.in('products.type_id', selectedTypes);
             }
 
             // category filter
             if (selectedCategories.length > 0) {
-                query = query.in('category_id', selectedCategories);
+                query = query.in('products.category_id', selectedCategories);
             }
 
             // style filter
             if (selectedStyles.length > 0) {
-                query = query.in('style_id', selectedStyles);
+                query = query.in('products.style_id', selectedStyles);
             }
 
             // gender filter
             if (selectedGender) {
-                query = query.eq('gender', selectedGender);
+                query = query.eq('products.gender', selectedGender);
             }
 
             // if discount
             if (onSaleOnly) {
-                query = query.gt('discount', 0);
+                query = query.gt('products.discount', 0);
             }
 
             // if less than 30 days
             if (newOnly) {
                 const thirtyDaysAgo = new Date();
                 thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-                query = query.gte('created_at', thirtyDaysAgo.toISOString());
+                query = query.gte('products.created_at', thirtyDaysAgo.toISOString());
             }
 
             // apply sorting
             switch (sortBy) {
                 case 'price_asc':
-                    query = query.order('price', { ascending: true });
+                    query = query.order('products(price)', { ascending: true });
                     break;
                 case 'price_desc':
-                    query = query.order('price', { ascending: false });
+                    query = query.order('products(price)', { ascending: false });
                     break;
                 case 'created_at_asc':
-                    query = query.order('created_at', { ascending: true });
+                    query = query.order('products(created_at)', { ascending: true });
                     break;
                 case 'created_at_desc':
-                    query = query.order('created_at', { ascending: false });
+                    query = query.order('products(created_at)', { ascending: false });
                     break;
                 case 'name_asc':
-                    query = query.order('name', { ascending: true });
+                    query = query.order('products(name)', { ascending: true });
                     break;
                 case 'name_desc':
-                    query = query.order('name', { ascending: false });
+                    query = query.order('products(name)', { ascending: false });
                     break;
                 default:
-                    query = query.order('created_at', { ascending: true });
+                    query = query.order('products(created_at)', { ascending: true });
             }
 
             // apply pagination
@@ -229,17 +254,17 @@ export default function ShopScreen() {
             }
 
             if (pageNumber === 0) {
-                setProducts(data as Product[]);
+                setProducts(data as ProdColors[]);
             } else {
                 // ensure no duplicates
                 setProducts((prev) => {
                     const existingIds = new Set(prev.map((p) => p.id));
-                    const filteredNew = (data as Product[]).filter((p) => !existingIds.has(p.id));
+                    const filteredNew = (data as ProdColors[]).filter((p) => !existingIds.has(p.id));
                     return [...prev, ...filteredNew];
                 });
             }
 
-            if ((data as Product[]).length < PAGE_SIZE) {
+            if ((data as ProdColors[]).length < PAGE_SIZE) {
                 setHasMore(false);
             }
 
@@ -280,63 +305,14 @@ export default function ShopScreen() {
             setSelectedGender(gen);
 
             // Do a “page 0” Supabase query inline
-            (async () => {
-                try {
-                    const from = 0;
-                    const to = PAGE_SIZE - 1;
-
-                    let query = supabase
-                        .from('products')
-                        .select(`
-              *,
-              product_styles(name),
-              product_types(name),
-              product_categories(name)
-            `);
-
-                    // Apply the same filters
-                    if (cats.length > 0) {
-                        query = query.in('category_id', cats);
-                    }
-                    if (types.length > 0) {
-                        query = query.in('type_id', types);
-                    }
-                    if (gen) {
-                        query = query.eq('gender', gen);
-                    }
-
-                    // Sort by oldest first
-                    query = query.order('created_at', { ascending: true });
-
-                    // Pagination range
-                    query = query.range(from, to);
-
-                    const { data, error } = await query;
-                    if (error) {
-                        console.error('Error on initial fetch (focus):', error);
-                        setHasMore(false);
-                        setProducts([]);
-                        return;
-                    }
-
-                    if (!data || data.length === 0) {
-                        setHasMore(false);
-                        setProducts([]);
-                    } else {
-                        setProducts(data as Product[]);
-                        if ((data as Product[]).length < PAGE_SIZE) {
-                            setHasMore(false);
-                        }
-                        setPage(1);
-                    }
-                } catch (err) {
-                    console.error('Unexpected fetch error:', err);
-                    setProducts([]);
+            fetchProductsPage(0)
+                .catch(err => {
+                    console.error('Error on focus fetch:', err);
                     setHasMore(false);
-                } finally {
+                })
+                .finally(() => {
                     setInitialLoading(false);
-                }
-            })();
+                });
 
             // Cleanup
             return () => { };
@@ -383,15 +359,25 @@ export default function ShopScreen() {
     const cardHeight = isGrid ? 300 : SCREEN_HEIGHT / 2.5;
     const cardMargin = !isGrid ? 4 : 0;
 
-    const renderProductItem = ({ item }: { item: Product }) => (
-        <ProductCard
-            product={item}
-            cardWidth={cardWidth}
-            cardHeight={cardHeight}
-            cardMargin={cardMargin}
-            textStyle={{ fontSize: 14 }}
-        />
-    );
+    const renderProductItem = ({ item }: { item: ProdColors }) => {
+        const cardProduct: Product = {
+            id: item.products.id,
+            name: item.products.name,
+            price: item.products.price,
+            discount: item.products.discount,
+            image_urls: item.image_urls,      // use the color’s image URLs
+        };
+
+        return (
+            <ProductCard
+                product={cardProduct}
+                cardWidth={cardWidth}
+                cardHeight={cardHeight}
+                cardMargin={cardMargin}
+                textStyle={{ fontSize: 14 }}
+            />
+        )
+    };
 
     // filter tapped, copy applied-temp then open modal
     const openFilterModal = () => {

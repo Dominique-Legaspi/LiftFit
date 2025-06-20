@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router'
 import React, { useEffect, useState } from 'react'
 import { ActivityIndicator, Alert, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native'
 import { supabase } from '../lib/supabase'
+import Loading from '@/components/ui/Loading'
 
 export default function ResetPasswordScreen() {
     const router = useRouter();
@@ -61,12 +62,9 @@ export default function ResetPasswordScreen() {
         }
     }
 
+    // loading spinner
     if (loading) {
-        return (
-            <SafeAreaView style={styles.center}>
-                <ActivityIndicator size="large" color={Colors.light.blue} />
-            </SafeAreaView>
-        )
+        return <Loading />
     }
 
     if (!linkValid) {
