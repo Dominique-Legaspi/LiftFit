@@ -1,12 +1,15 @@
 import { Colors } from '@/constants/Colors';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, Dimensions, Image, NativeScrollEvent, NativeSyntheticEvent, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { supabase } from '@/app/lib/supabase';
+import { ActivityIndicator, Animated, Dimensions, FlatList, Image, Modal, NativeScrollEvent, NativeSyntheticEvent, Pressable, SafeAreaView, ScrollView, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
+import { SUPABASE_URL, supabase } from '@/app/lib/supabase';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Fonts } from '@/constants/Fonts';
 import TopBar from '@/components/ui/TopBar';
 import { ImageCarousel } from '@/components/ui/ImageCarousel';
+import StarRating from '@/components/ui/StarRating';
+import { useWishlist } from '@/hooks/useWishlist';
+import Loading from '@/components/ui/Loading';
 
 export const options = {
     headerShown: false,
@@ -23,7 +26,6 @@ type Product = {
     type_id?: number;
     style_id?: string;
     gender?: string;
-    image_urls: string[];
     product_styles: { name: string };
     product_types: { name: string };
     product_categories: { name: string };
@@ -34,6 +36,7 @@ type ProductColor = {
     product_id: string;
     color: string;
     hex: string;
+    image_urls?: string[];
 }
 
 type ProductStock = {
@@ -43,18 +46,57 @@ type ProductStock = {
     stock: number;
 }
 
+type ProductReviews = {
+    id: string;
+    profile_id: string;
+    product_id: string;
+    rating: number;
+    value: number;
+    quality: number;
+    comfort: number;
+    sizing: number;
+    aesthetic: number;
+    comment: string;
+    image_urls?: string[];
+    created_at: string;
+    profiles: { username: string; avatar_url: string; }
+}
+
+type ReviewCardProps = {
+    review: ProductReviews;
+    onImagePress: (uri: string) => void;
+    containerStyle?: StyleProp<ViewStyle>;
+}
+
 export default function ProductScreen() {
+    // product
     const { productId } = useLocalSearchParams<{ productId: string }>();
     const [product, setProduct] = useState<Product | null>(null);
 
+    // product color and size
     const [productColors, setProductColors] = useState<ProductColor[]>([]);
     const [productStocks, setProductStocks] = useState<ProductStock[]>([]);
-
     const [selectedColor, setSelectedColor] = useState<ProductColor | null>(null);
     const [selectedSize, setSelectedSize] = useState<ProductStock | null>(null);
 
-    const [isWishlisted, setIsWishlisted] = useState<boolean>(false);
+    // define carousel images
+    const [carouselImages, setCarouselImages] = useState<string[]>([]);
+    const [colorToIndex, setColorToIndex] = useState<Record<string, number>>({});
+    const carouselRef = useRef<FlatList<string>>(null);
+
+    // handle wishlist
+    const { isWishlisted, toggleWishlist } = useWishlist({
+        productId,
+        productColorId: selectedColor?.id ?? '',
+        productStockId: selectedSize?.id ?? '',
+    });
+
+    // new item tag
     const [isNewItem, setIsNewItem] = useState<boolean>(false);
+
+    // reviews
+    const [reviews, setReviews] = useState<ProductReviews[]>([]);
+    const [modalUri, setModalUri] = useState<string | null>(null);
 
     const [loading, setLoading] = useState<boolean>(false);
 
@@ -104,28 +146,43 @@ export default function ProductScreen() {
         setLoading(false);
 
         // set a default color and size on screen entry
+        // if (colorsData.length > 0) {
+        //     // set the first color
+        //     const defaultColor = colorsData[0];
+        //     setSelectedColor(defaultColor);
+
+        //     // set 'M' as default
+        //     const defaultSize = stocksData.find(
+        //         s => s.product_color_id === defaultColor.id && s.size === 'M'
+        //     );
+
+        //     if (defaultSize) {
+        //         setSelectedSize(defaultSize);
+        //     } else {
+        //         // if no M in product_stock, set the stock to 0
+        //         setSelectedSize({
+        //             id: `${defaultColor.id}-M`,
+        //             product_color_id: defaultColor.id,
+        //             size: 'M',
+        //             stock: 0,
+        //         });
+        //     }
+        // };
+
         if (colorsData.length > 0) {
-            // set the first color
             const defaultColor = colorsData[0];
             setSelectedColor(defaultColor);
 
-            // set 'M' as default
             const defaultSize = stocksData.find(
-                s => s.product_color_id === defaultColor.id && s.size === 'M'
+                (s) => s.product_color_id === defaultColor.id && s.size === 'M'
             );
 
             if (defaultSize) {
                 setSelectedSize(defaultSize);
             } else {
-                // if no M in product_stock, set the stock to 0
-                setSelectedSize({
-                    id: `${defaultColor.id}-M`,
-                    product_color_id: defaultColor.id,
-                    size: 'M',
-                    stock: 0,
-                });
+                setSelectedSize(null);
             }
-        };
+        }
 
     };
 
@@ -134,10 +191,87 @@ export default function ProductScreen() {
         fetchProductStock();
     }, [productId]);
 
-    // set image if only one image
-    const firstUrl = product?.image_urls && product?.image_urls.length > 0
-        ? product?.image_urls[0]
-        : null;
+    // merge product color images
+    useEffect(() => {
+        if (!product) return;
+
+        const colorPairs: { uri: string; colorId: string }[] = productColors.flatMap(c =>
+            (c.image_urls ?? []).map(uri => ({ uri, colorId: c.id }))
+        );
+
+        const allUris = [...colorPairs.map(p => p.uri)];
+        setCarouselImages(allUris);
+
+        const idxMap: Record<string, number> = {};
+        colorPairs.forEach(({ uri, colorId }) => {
+            if (idxMap[colorId] == null) {
+                const idx = allUris.indexOf(uri);
+                if (idx >= 0) idxMap[colorId] = idx;
+            }
+        });
+        setColorToIndex(idxMap);
+    }, [product, productColors]);
+
+    // define public bucket url 
+    const REVIEW_IMAGES_BASE =
+        `${SUPABASE_URL}/storage/v1/object/public/review-images/`;
+
+    // helper to safely encode path segments
+    function encodePath(path: string) {
+        return path.split('/').map(encodeURIComponent).join('/')
+    }
+
+    // fetch reviews
+    async function fetchReviews() {
+        if (!productId) return;
+
+        setLoading(true);
+        try {
+            const { data, error } = await supabase
+                .from('reviews')
+                .select(`
+                    *,
+                    profiles(username, avatar_url)
+                    `)
+                .eq('product_id', productId)
+                .order('rating', { ascending: false })
+                .limit(5);
+
+            if (error) throw error;
+
+            const reviews = (data ?? []) as ProductReviews[];
+
+            if (!reviews) {
+                setReviews([]);
+                return;
+            }
+
+            // map image_urls
+            // ensures zero storage-API metadata calls to reduce duplicated API calls
+            const withUrls = reviews.map((r) => ({
+                ...r,
+                image_urls: r.image_urls?.map((x) => {
+                    // if it's already a URL, just use it
+                    if (x.startsWith('http')) return x
+                    // otherwise assume it's a storage-key and build public URL
+                    return `${REVIEW_IMAGES_BASE}${encodePath(x)}`
+                }) ?? []
+            }))
+
+            setReviews(withUrls);
+
+            // setReviews(data);
+
+        } catch (err) {
+            console.error("Error fetching reviews:", err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchReviews();
+    }, [productId])
 
     // determine if new item
     const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
@@ -169,26 +303,41 @@ export default function ProductScreen() {
     const savingsPrice = basePrice - discountPrice;
 
     const SIZE_ORDER = ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL'];
-    const sizeMap = new Map(productStocks
-        .filter((stock) => stock.product_color_id === selectedColor?.id)
-        .map((stock) => [stock.size, stock]));
+    // const sizeMap = new Map(productStocks
+    //     .filter((stock) => stock.product_color_id === selectedColor?.id)
+    //     .map((stock) => [stock.size, stock]));
 
-    // sizes
-    const orderedSizes: ProductStock[] = SIZE_ORDER.map((size) => {
-        const stockEntry = sizeMap.get(size);
-        if (stockEntry) return stockEntry;
+    // // sizes
+    // const orderedSizes: ProductStock[] = SIZE_ORDER.map((size) => {
+    //     const stockEntry = sizeMap.get(size);
+    //     if (stockEntry) return stockEntry;
 
-        // if product size and color does not exist in database, set the stock to 0
-        return {
-            id: `${selectedColor?.id}-${size}`,
-            product_color_id: selectedColor?.id ?? '',
-            size,
-            stock: 0,
-        }
-    })
+    //     // if product size and color does not exist in database, set the stock to 0
+    //     return {
+    //         id: `${selectedColor?.id}-${size}`,
+    //         product_color_id: selectedColor?.id ?? '',
+    //         size,
+    //         stock: 0,
+    //     }
+    // })
+
+    const actualStocks = productStocks.filter(
+        (s) => s.product_color_id === selectedColor?.id
+    );
+
+    const orderedSizes: ProductStock[] = actualStocks.sort(
+        (a, b) =>
+            SIZE_ORDER.indexOf(a.size) - SIZE_ORDER.indexOf(b.size)
+    );
 
     const handleColorSelect = (color: ProductColor) => {
         setSelectedColor(color);
+
+        // scroll to that color’s first image
+        const idx = colorToIndex[color.id];
+        if (idx != null) {
+            carouselRef.current?.scrollToIndex({ index: idx, animated: true });
+        }
 
         // If a size was already chosen, carry its "size string" over to the new color:
         if (selectedSize) {
@@ -202,37 +351,20 @@ export default function ProductScreen() {
                 setSelectedSize(sameSizeUnderNewColor);
             } else {
                 // build a dummy stock row so the UI still highlights that size
-                setSelectedSize({
-                    id: `${color.id}-${selectedSize.size}`,
-                    product_color_id: color.id,
-                    size: selectedSize.size,
-                    stock: 0,
-                });
+                // setSelectedSize({
+                //     id: `${color.id}-${selectedSize.size}`,
+                //     product_color_id: color.id,
+                //     size: selectedSize.size,
+                //     stock: 0,
+                // });
+                setSelectedSize(null);
             }
-        }
-    };
-
-    const handleWishlistPress = () => {
-        try {
-            if (!isWishlisted) {
-                // add insert logic
-                setIsWishlisted(true);
-            } else {
-                // add delete logic
-                setIsWishlisted(false);
-            }
-        } catch (err) {
-            console.error('Error wishlisting item:', err);
         }
     };
 
     // loading spinner
     if (loading) {
-        return (
-            <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={Colors.light.blue} />
-            </View>
-        )
+        return <Loading />
     }
 
     const StockPanel = () => (
@@ -266,6 +398,19 @@ export default function ProductScreen() {
             )}
 
             <View style={styles.addToCartContainer}>
+                {/* wishlist */}
+                {/* {selectedColor && selectedSize && selectedSize.stock > 0 && ( */}
+                    <Pressable onPress={toggleWishlist}>
+                        <Ionicons
+                            name={isWishlisted ? "heart" : "heart-outline"}
+                            size={32}
+                            color={Colors.light.blue}
+                            style={styles.iconButton}
+                        />
+                    </Pressable>
+                {/* )} */}
+
+                {/* add to cart */}
                 <Pressable
                     style={[styles.addToCartButton,
                     selectedColor && selectedSize && selectedSize.stock > 0
@@ -294,8 +439,100 @@ export default function ProductScreen() {
         </View>
     )
 
+    const ReviewCard: React.FC<ReviewCardProps> = ({ review, onImagePress, containerStyle }) => {
+        const reviewDate = new Date(review.created_at).toLocaleDateString();
+
+        // set image if only one image
+        const firstUrl = review?.image_urls && review?.image_urls.length > 0
+            ? review?.image_urls[0]
+            : null;
+
+        return (
+            <View style={[styles.reviewCard, containerStyle]}>
+                {/* user info, avatar, and date */}
+                <View style={styles.reviewUserInfo}>
+                    <View style={{ flexDirection: 'row' }}>
+                        <Image source={{ uri: review.profiles.avatar_url }} style={styles.reviewAvatar} />
+
+                        <View style={{ flexDirection: 'column' }}>
+                            <Text style={styles.reviewUsername}>{review.profiles.username}</Text>
+                            <StarRating
+                                average={review.rating}
+                                size={16}
+                                fullColor={Colors.light.blue}
+                                emptyColor={Colors.light.blue}
+                            />
+                        </View>
+                    </View>
+                    <Text style={styles.reviewDate}>{reviewDate}</Text>
+                </View>
+                {/* review images */}
+                {review.image_urls && review.image_urls?.length > 1 && (
+                    <FlatList
+                        data={review.image_urls}
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        keyExtractor={(uri) => uri}
+                        renderItem={({ item }) => (
+                            <Pressable
+                                onPress={() => onImagePress(item)}
+                            >
+                                <Image
+                                    source={{ uri: item }}
+                                    style={styles.reviewImages}
+                                    onError={({ nativeEvent }) =>
+                                        console.warn('Image load error', item, nativeEvent.error)
+                                    }
+                                />
+                            </Pressable>
+                        )}
+                        contentContainerStyle={styles.reviewImagesContainer}
+                    />
+                )}
+                {/* review comment */}
+                <View style={[
+                    styles.reviewCommentContainer,
+                    firstUrl ? { flexDirection: 'row', justifyContent: 'space-between' } : undefined]}
+                >
+                    <Text style={styles.reviewComment}>{review.comment}</Text>
+                    {firstUrl && review.image_urls?.length === 1 && (
+                        <Pressable
+                            onPress={() => onImagePress(firstUrl)}
+                            style={{ marginLeft: 4 }}
+                        >
+                            <Image
+                                source={{ uri: firstUrl }}
+                                style={styles.reviewImages}
+                                onError={({ nativeEvent }) =>
+                                    console.warn('Image load error', firstUrl, nativeEvent.error)
+                                }
+                            />
+                        </Pressable>
+                    )}
+                </View>
+            </View>
+        )
+    }
+
     return (
         <SafeAreaView style={styles.container}>
+            {/* full size image view */}
+            <Modal
+                visible={!!modalUri}
+                transparent
+                onRequestClose={() => setModalUri(null)}
+            >
+                <Pressable
+                    style={styles.modalBackground}
+                    onPress={() => setModalUri(null)}
+                >
+                    <Image
+                        source={{ uri: modalUri! }}
+                        style={styles.fullImage}
+                    />
+                </Pressable>
+            </Modal>
+
             <Animated.ScrollView
                 style={styles.scrollViewContainer}
                 contentContainerStyle={{ paddingBottom: 90 }} // padding to prevent floating panel from blocking content under
@@ -316,8 +553,12 @@ export default function ProductScreen() {
                     )}
                 </View> */}
 
-                {product?.image_urls?.length
-                    ? <ImageCarousel images={product.image_urls} height={520} />
+                {carouselImages.length > 0
+                    ? <ImageCarousel
+                        ref={carouselRef}
+                        images={carouselImages}
+                        height={520}
+                    />
                     : (
                         <View style={[styles.imageContainer, { justifyContent: 'center' }]}>
                             <Ionicons name="image-outline" size={60} color={Colors.light.gray} />
@@ -329,17 +570,9 @@ export default function ProductScreen() {
                     <View style={styles.productHeaderContainer}>
                         <View style={styles.productNameContainer}>
                             <Text style={styles.productName}>{product?.name}</Text>
+                            {selectedColor && <Text style={styles.productType}>{selectedColor?.color}</Text>}
                         </View>
                         <View style={styles.iconButtonContainer}>
-                            {/* wishlist */}
-                            <Pressable onPress={handleWishlistPress}>
-                                <Ionicons
-                                    name={isWishlisted ? "heart" : "heart-outline"}
-                                    size={32}
-                                    color={Colors.light.blue}
-                                    style={styles.iconButton}
-                                />
-                            </Pressable>
                             {/* share */}
                             <Ionicons name="share-outline" size={32} color={Colors.light.blue} style={styles.iconButton} />
                         </View>
@@ -473,7 +706,22 @@ export default function ProductScreen() {
                     </View>
 
                     <Text style={styles.sectionTitle}>Reviews</Text>
-
+                    {reviews.length > 0 ?
+                        reviews.map((review, index) => {
+                            const isLast = index === reviews.length - 1;
+                            return (
+                                <ReviewCard
+                                    key={review.id}
+                                    review={review}
+                                    onImagePress={setModalUri}
+                                    containerStyle={isLast ? { borderBottomWidth: 0 } : undefined}
+                                />
+                            )
+                        }) : (
+                            <View style={styles.noReviewsContainer}>
+                                <Text style={styles.noReviews}>Be the first to review this product.</Text>
+                            </View>
+                        )}
                 </View>
             </Animated.ScrollView>
 
@@ -571,6 +819,11 @@ const styles = StyleSheet.create({
     productName: {
         fontSize: 24,
         fontFamily: Fonts.semiBold,
+    },
+    productType: {
+        fontSize: 16,
+        fontFamily: Fonts.regular,
+        color: Colors.light.gray,
     },
 
     // icon buttons
@@ -728,6 +981,7 @@ const styles = StyleSheet.create({
 
     // stock info
     stockInfoContainer: {
+        flex: 1,
         flexDirection: 'row',
         marginVertical: 8,
         paddingBottom: 24,
@@ -748,7 +1002,7 @@ const styles = StyleSheet.create({
         elevation: 5,
     },
     stockInfo: {
-        width: '50%',
+        width: '40%',
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -759,11 +1013,13 @@ const styles = StyleSheet.create({
 
     // add to cart button
     addToCartContainer: {
-        width: '50%',
+        width: '60%',
+        flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
     },
     addToCartButton: {
+        marginLeft: 16,
         marginVertical: 12,
         flexDirection: 'row',
         alignItems: 'center',
@@ -785,5 +1041,83 @@ const styles = StyleSheet.create({
         fontFamily: Fonts.semiBold,
         fontSize: 20,
     },
+
+    // reviews
+    reviewCard: {
+        margin: 4,
+        paddingVertical: 8,
+        borderBottomWidth: 1,
+        borderBottomColor: Colors.light.gray + '33',
+    },
+    reviewUserInfo: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+    },
+    reviewUsername: {
+        fontFamily: Fonts.semiBold,
+        fontSize: 14,
+        paddingVertical: 4,
+    },
+    reviewAvatar: {
+        marginRight: 8,
+        alignItems: 'center',
+        width: 40,
+        height: 40,
+        borderRadius: 50,
+    },
+
+    // review images
+    modalBackground: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.8)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    fullImage: {
+        width: '90%',
+        height: '90%',
+        resizeMode: 'contain',
+    },
+    reviewImagesContainer: {
+        marginVertical: 8,
+    },
+    reviewImages: {
+        width: 100,
+        height: 150,
+        marginRight: 4,
+        resizeMode: 'contain',
+    },
+
+    // review comments
+    reviewCommentContainer: {
+        paddingVertical: 8,
+    },
+    reviewComment: {
+        flex: 1,
+        fontSize: 14,
+    },
+    reviewRatingRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    reviewRatingText: {
+        marginLeft: 4,
+        fontSize: 16,
+    },
+    reviewDate: {
+        color: Colors.light.lightgray,
+        fontSize: 14,
+    },
+
+    noReviewsContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 12,
+        marginVertical: 12,
+    },
+    noReviews: {
+        fontSize: 16,
+        fontFamily: Fonts.regular,
+    }
 })
 

@@ -6,6 +6,7 @@ import React, { useState } from 'react'
 import { ActivityIndicator, Alert, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native'
 import { supabase } from '../lib/supabase'
 import Ionicons from '@expo/vector-icons/Ionicons'
+import Loading from '@/components/ui/Loading'
 
 export default function SignUpScreen() {
     const router = useRouter();
@@ -109,12 +110,9 @@ export default function SignUpScreen() {
         }
     }
 
+    // loading spinner
     if (loading) {
-        return (
-            <SafeAreaView style={styles.center}>
-                <ActivityIndicator size="large" color={Colors.light.blue} />
-            </SafeAreaView>
-        )
+        return <Loading />
     }
 
     return (

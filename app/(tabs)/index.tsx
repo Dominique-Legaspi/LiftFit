@@ -9,6 +9,7 @@ import SectionHeader from '@/components/ui/SectionHeader';
 import TopBar from '@/components/ui/TopBar';
 import HorizontalProductList from '@/components/ui/HorizontalProductList';
 import { useRouter } from 'expo-router';
+import Loading from '@/components/ui/Loading';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = width * 0.7;
@@ -125,13 +126,9 @@ export default function HomeScreen() {
   };
 
   // loading spinner
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={Colors.light.blue} />
-      </View>
-    )
-  }
+      if (loading) {
+          return <Loading />
+      }
 
 
   // test
@@ -158,7 +155,8 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.container}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        style={[styles.scrollViewContainer, { marginBottom: 60 }]}
+        style={styles.scrollViewContainer}
+        contentContainerStyle={{ paddingBottom: 80 }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}

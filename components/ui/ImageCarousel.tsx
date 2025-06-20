@@ -1,6 +1,6 @@
 import { Colors } from "@/constants/Colors";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import React, { useRef, useState } from "react";
+import React, { forwardRef, useImperativeHandle, useRef, useState } from "react";
 import { Dimensions, FlatList, Image, NativeScrollEvent, NativeSyntheticEvent, Pressable, StyleSheet, View } from "react-native";
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -10,9 +10,12 @@ type ImageProps = {
     height?: number;
 };
 
-export function ImageCarousel({ images, height = 300 }: ImageProps) {
+export const ImageCarousel = forwardRef<FlatList<string>, ImageProps>(({ images, height = 300 }, ref) => {
     const [activeIndex, setActiveIndex] = useState(0);
     const flatListRef = useRef<FlatList<string>>(null);
+
+    // expose the FlatList instance to parent via ref
+    useImperativeHandle(ref, () => flatListRef.current!);
 
     const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
         const idx = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
@@ -110,7 +113,7 @@ export function ImageCarousel({ images, height = 300 }: ImageProps) {
             )}
         </View>
     )
-};
+});
 
 const styles = StyleSheet.create({
     imageFrame: {
@@ -126,8 +129,8 @@ const styles = StyleSheet.create({
         position: 'absolute',
         top: '50%',
         padding: 8,
-        backgroundColor: '#ffffff66',
-        borderRadius: 50,
+        // backgroundColor: '#ffffff66',
+        // borderRadius: 50,
         transform: [{ translateY: -16 }],
         zIndex: 999,
     },

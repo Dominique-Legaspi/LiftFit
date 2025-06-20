@@ -8,6 +8,7 @@ import { Fonts } from '@/constants/Fonts';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import HorizontalProductList from '@/components/ui/HorizontalProductList';
 import { useRouter } from 'expo-router';
+import Loading from '@/components/ui/Loading';
 
 type Product = {
   id: string;
@@ -122,13 +123,9 @@ export default function BrowseScreen() {
   }, [])
 
   // loading spinner
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={Colors.light.blue} />
-      </View>
-    )
-  }
+      if (loading) {
+          return <Loading />
+      }
 
   const shopAllCategories = [
     {
@@ -159,7 +156,10 @@ export default function BrowseScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollViewContainer}>
+      <ScrollView
+        style={styles.scrollViewContainer}
+        contentContainerStyle={{ paddingBottom: 80 }}  
+      >
         <TopBar title="browse" icon="search-outline" value={searchQuery} onChangeText={setSearchQuery} />
 
         <View style={styles.browseCardContainer}>
@@ -237,7 +237,6 @@ const styles = StyleSheet.create({
   },
   scrollViewContainer: {
     paddingVertical: 10,
-    marginBottom: 60
   },
   loadingContainer: {
     flex: 1,

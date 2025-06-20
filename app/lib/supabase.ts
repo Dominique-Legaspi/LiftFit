@@ -5,7 +5,7 @@ import Constants from 'expo-constants';
 
 // Fallback so it works both in dev (Constants.manifest) and in prod (Constants.expoConfig)
 const expoConfig = (Constants.expoConfig ?? Constants.manifest) as any;
-const SUPABASE_URL = expoConfig.extra?.supabaseUrl;
+export const SUPABASE_URL = expoConfig.extra?.supabaseUrl;
 const SUPABASE_ANON_KEY = expoConfig.extra?.supabaseAnonKey;
 
 // 👇 Early check to fail fast if something’s wrong
