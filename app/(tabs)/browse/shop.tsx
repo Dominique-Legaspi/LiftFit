@@ -4,7 +4,7 @@ import TopBar from '@/components/ui/TopBar';
 import { Colors } from '@/constants/Colors';
 import { Fonts } from '@/constants/Fonts';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Dimensions, FlatList, Modal, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -51,6 +51,8 @@ export default function ShopScreen() {
         type_id?: string;
         gender?: string;
     };
+
+    const router = useRouter();
 
     // search query
     const [searchQuery, setSearchQuery] = useState<string>('');
@@ -375,6 +377,15 @@ export default function ShopScreen() {
                 cardHeight={cardHeight}
                 cardMargin={cardMargin}
                 textStyle={{ fontSize: 14 }}
+                onPress={() => {
+                    router.push({
+                        pathname: '/product/[productId]',
+                        params: {
+                            productId: item.products.id,
+                            productColorId: item.id,
+                        }
+                    })
+                }}
             />
         )
     };
