@@ -1,7 +1,7 @@
 import { Colors } from '@/constants/Colors';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, Dimensions, FlatList, Image, Modal, NativeScrollEvent, NativeSyntheticEvent, Pressable, SafeAreaView, ScrollView, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
+import { ActivityIndicator, Alert, Animated, Dimensions, FlatList, Image, Modal, NativeScrollEvent, NativeSyntheticEvent, Pressable, SafeAreaView, ScrollView, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { SUPABASE_URL, supabase } from '@/app/lib/supabase';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Fonts } from '@/constants/Fonts';
@@ -10,6 +10,7 @@ import { ImageCarousel } from '@/components/ui/ImageCarousel';
 import StarRating from '@/components/ui/StarRating';
 import { useWishlist } from '@/hooks/useWishlist';
 import Loading from '@/components/ui/Loading';
+import { useAddToCart } from '@/hooks/useAddToCart';
 
 export const options = {
     headerShown: false,
@@ -93,6 +94,16 @@ export default function ProductScreen() {
         productColorId: selectedColor?.id ?? '',
         productStockId: selectedSize?.id ?? '',
     });
+
+    // handle add to cart
+    const {
+        addToCart,
+        isLoading: isAdding,
+    } = useAddToCart({
+        productId: productId!,
+        productColorId: selectedColor?.id ?? "",
+        productStockId: selectedSize?.id ?? "",
+    })
 
     // new item tag
     const [isNewItem, setIsNewItem] = useState<boolean>(false);
@@ -371,10 +382,24 @@ export default function ProductScreen() {
                     s.product_color_id === color.id &&
                     s.size === selectedSize.size
             );
-            
+
             setSelectedSize(matchingSize ?? null);
         }
     };
+
+    const handleAddToCart = async () => {
+        if (!selectedColor || !selectedSize) {
+            Alert.alert("No color or size selected", "Please select a color and size.");
+            return;
+        };
+
+        try {
+            await addToCart();
+            router.push("/cart");
+        } catch (err) {
+            console.warn("Add to cart failed:", err);
+        }
+    }
 
     // loading spinner
     if (loading) {
@@ -430,15 +455,19 @@ export default function ProductScreen() {
                     selectedColor && selectedSize && selectedSize.stock > 0
                         ? styles.addToCartSelection
                         : styles.addToCartNoSelection]}
-                    disabled={selectedSize && selectedSize.stock === 0}
+                    disabled={isAdding || !selectedColor || !selectedSize || selectedSize.stock === 0}
+                    onPress={handleAddToCart}
                 >
-                    <Ionicons name="cart-outline" size={24}
-                        style={[styles.addToCartText, {
-                            marginRight: 4,
-                            color: selectedColor && selectedSize && selectedSize.stock > 0
-                                ? '#fff'
-                                : Colors.light.gray
-                        }]} />
+                    {isAdding
+                        ? <ActivityIndicator size="small" color="#fff" style={{ marginRight: 8 }} />
+                        : <Ionicons name="cart-outline" size={24}
+                            style={[styles.addToCartText, {
+                                marginRight: 4,
+                                color: selectedColor && selectedSize && selectedSize.stock > 0
+                                    ? '#fff'
+                                    : Colors.light.gray
+                            }]} />
+                    }
                     <Text style={[
                         styles.addToCartText,
                         {
