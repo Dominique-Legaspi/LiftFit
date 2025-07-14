@@ -43,7 +43,7 @@ export function useAddToCart({
                     .update({ quantity: existing.quantity + 1 })
                     .eq('id', existing.id)
                     .select('id, quantity')
-                    .single();
+                    .maybeSingle();
 
                 if (updateError) throw updateError;
                 return data;
