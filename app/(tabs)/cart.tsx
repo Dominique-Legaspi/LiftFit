@@ -3,7 +3,7 @@ import { Colors } from '@/constants/Colors';
 import { Fonts } from '@/constants/Fonts';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { Alert, Pressable, RefreshControl, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, Pressable, RefreshControl, SafeAreaView, ScrollView, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { useUser } from '../context/UserProvider';
 import { useEffect, useState } from 'react';
 import CustomButton from '@/components/ui/CustomButton';
@@ -36,6 +36,11 @@ type ProductCart = {
     size: string;
     stock: number;
   };
+}
+
+type CardItemProps = {
+  item: ProductCart;
+  containerStyle?: StyleProp<ViewStyle>;
 }
 
 export default function CartScreen() {
@@ -74,6 +79,7 @@ export default function CartScreen() {
     }
   };
 
+  // delete cart item
   const onDeletePress = async (cartId: string) => {
     if (!profileId) return;
 
@@ -95,6 +101,7 @@ export default function CartScreen() {
     }
   }
 
+  // confirmation alert for cart item deletion
   const confirmDelete = (cartId: string) => {
     Alert.alert(
       "Remove from Cart",
@@ -105,6 +112,10 @@ export default function CartScreen() {
       ]
     );
   };
+
+  const handleQuantityPress = () => {
+    return
+  }
 
   useEffect(() => {
     fetchCart()
@@ -126,6 +137,8 @@ export default function CartScreen() {
   const isEmpty = cartItems.length === 0;
 
   // calculate price
+  const formatCurrency = (value: number) => `$${value.toFixed(2)}`;
+
   const originalPrice = cartItems.reduce((sum, item) => {
     return sum + item.products.price * item.quantity;
   }, 0);
@@ -136,6 +149,53 @@ export default function CartScreen() {
   }, 0);
 
   const totalPrice = originalPrice - discountPrice;
+
+  // render cart item
+  const CartItemCard: React.FC<CardItemProps> = ({ item, containerStyle }) => {
+    const image_url = item?.product_colors?.image_urls?.[0];
+
+    const itemPrice = item.products.price;
+    const itemDiscount = item.products.discount;
+    const itemDiscountPrice = itemPrice - itemPrice * (itemDiscount ?? 0);
+
+    const hasDiscount = Boolean(itemDiscount)
+
+    return (
+      <Pressable style={[styles.cardContainer, containerStyle]}>
+        <Image source={{ uri: image_url }} style={styles.cardImage} />
+        <View style={styles.cardInfoContainer}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>{item.products.name}</Text>
+            <Pressable
+              onPress={() => confirmDelete(item.id)}
+              style={styles.deleteButton}
+            >
+              <Ionicons name="trash-outline" size={20} color={Colors.light.gray} />
+            </Pressable>
+          </View>
+          <Text style={styles.cardSubtitle}>{item.product_colors.color}, {item.product_stocks.size}</Text>
+          <View style={styles.cardPriceRow}>
+            {hasDiscount ? (
+              <View style={styles.priceRow}>
+                <Text style={styles.cardRegularPriceStrikethrough}>{formatCurrency(itemPrice)}</Text>
+                <Text style={styles.cardDiscountPrice}>{" "}{formatCurrency(itemDiscountPrice)}</Text>
+              </View>
+            ) : (
+              <Text style={styles.cardRegularPrice}>{formatCurrency(itemPrice)}</Text>
+            )}
+            <CustomButton
+              icon="chevron-down"
+              iconSize={12}
+              text={"Qty: " + item.quantity}
+              onPress={() => handleQuantityPress()}
+              containerStyle={{ paddingHorizontal: 8, paddingVertical: 6 }}
+              textStyle={{ fontSize: 12 }}
+            />
+          </View>
+        </View>
+      </Pressable>
+    )
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -163,10 +223,9 @@ export default function CartScreen() {
           </View>
         ) : (
           cartItems.map(item => (
-            <WishlistCard
+            <CartItemCard
               key={item.id}
               item={item}
-              onDelete={() => confirmDelete(item.id)}
             />
           ))
         )}
@@ -241,5 +300,66 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.medium,
     fontSize: 20,
   },
+
+  // card
+  cardContainer: {
+    marginVertical: 4,
+    marginHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    padding: 4,
+  },
+  cardImage: {
+    width: 60,
+    height: 120,
+    resizeMode: 'contain',
+  },
+  cardInfoContainer: {
+    flex: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+  },
+  cardTitle: {
+    flex: 1,
+    paddingVertical: 4,
+    fontSize: 16,
+    fontFamily: Fonts.medium,
+    color: Colors.light.blue,
+  },
+  cardSubtitle: {
+    fontSize: 12,
+    fontFamily: Fonts.regular,
+  },
+  cardPriceRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: 'space-between',
+    paddingVertical: 4,
+  },
+  cardRegularPrice: {
+    color: "#eee",
+    fontSize: 16,
+    fontFamily: Fonts.medium,
+  },
+  cardRegularPriceStrikethrough: {
+    color: "#aaa",
+    fontSize: 14,
+    fontFamily: Fonts.regular,
+    textDecorationLine: "line-through",
+  },
+  cardDiscountPrice: {
+    color: "#ff3030",
+    fontSize: 16,
+    fontFamily: Fonts.extraBold,
+  },
+  deleteButton: {
+    padding: 4,
+  }
 
 });
