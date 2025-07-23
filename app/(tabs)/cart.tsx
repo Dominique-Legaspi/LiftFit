@@ -3,13 +3,12 @@ import { Colors } from '@/constants/Colors';
 import { Fonts } from '@/constants/Fonts';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { Alert, Image, Pressable, RefreshControl, SafeAreaView, ScrollView, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
+import { Alert, Image, Modal, Pressable, RefreshControl, SafeAreaView, ScrollView, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { useUser } from '../context/UserProvider';
 import { useEffect, useState } from 'react';
 import CustomButton from '@/components/ui/CustomButton';
 import { supabase } from '../lib/supabase';
 import Loading from '@/components/ui/Loading';
-import WishlistCard from '@/components/ui/WishlistCard';
 
 type ProductCart = {
   id: string;
@@ -50,6 +49,12 @@ export default function CartScreen() {
   const router = useRouter();
 
   const [cartItems, setCartItems] = useState<ProductCart[]>([]);
+
+  // quantity update modal
+  const [selectedItem, setSelectedItem] = useState<ProductCart | null>(null);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedQuantity, setSelectedQuantity] = useState<number>(1);
+
   const [loading, setLoading] = useState<boolean>(false);
   const [refreshing, setRefreshing] = useState<boolean>(false);
 
@@ -68,7 +73,8 @@ export default function CartScreen() {
           product_colors(*),
           product_stocks(*)
         `)
-        .eq('profile_id', profileId);
+        .eq('profile_id', profileId)
+        .order('quantity', { ascending: false });
 
       if (error) throw error;
       setCartItems(data);
@@ -113,9 +119,30 @@ export default function CartScreen() {
     );
   };
 
-  const handleQuantityPress = () => {
-    return
-  }
+  // update item quantity
+  const updateQuantity = async (item: ProductCart | null, quantity: number) => {
+    if (!item || !profileId || quantity < 1 || quantity === item.quantity || quantity > maxStock) return;
+
+    setLoading(true);
+
+    try {
+      const { error } = await supabase
+        .from('cart_items')
+        .update({ quantity })
+        .eq('id', item.id)
+        .eq('profile_id', profileId);
+
+      if (error) throw error;
+
+      // update state locally
+      Alert.alert("Quantity updated", "Quantity of selected item has been updated.")
+      await fetchCart();
+    } catch (err) {
+      console.error("Failed to update quantity:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchCart()
@@ -135,6 +162,9 @@ export default function CartScreen() {
 
   // empty cart
   const isEmpty = cartItems.length === 0;
+
+  // product stocks
+  const maxStock = selectedItem?.product_stocks.stock ?? 10;
 
   // calculate price
   const formatCurrency = (value: number) => `$${value.toFixed(2)}`;
@@ -183,14 +213,26 @@ export default function CartScreen() {
             ) : (
               <Text style={styles.cardRegularPrice}>{formatCurrency(itemPrice)}</Text>
             )}
-            <CustomButton
-              icon="chevron-down"
-              iconSize={12}
-              text={"Qty: " + item.quantity}
-              onPress={() => handleQuantityPress()}
-              containerStyle={{ paddingHorizontal: 8, paddingVertical: 6 }}
-              textStyle={{ fontSize: 12 }}
-            />
+
+            <View style={styles.quantityControls}>
+              <Pressable
+                onPress={() => updateQuantity(item, item.quantity - 1)}
+                style={styles.qtyButton}
+                disabled={item.quantity <= 1}
+              >
+                <Text style={styles.qtyButtonText}>−</Text>
+              </Pressable>
+
+              <Text style={styles.qtyText}>{item.quantity}</Text>
+
+              <Pressable
+                onPress={() => updateQuantity(item, item.quantity + 1)}
+                style={styles.qtyButton}
+                disabled={item.quantity >= item.product_stocks.stock}
+              >
+                <Text style={styles.qtyButtonText}>+</Text>
+              </Pressable>
+            </View>
           </View>
         </View>
       </Pressable>
@@ -202,6 +244,7 @@ export default function CartScreen() {
       <ScrollView
         style={styles.scrollViewContainer}
         contentContainerStyle={{ paddingBottom: 80 }}
+        keyboardShouldPersistTaps="handled"
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
@@ -360,6 +403,25 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     padding: 4,
-  }
-
+  },
+  quantityControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  qtyButton: {
+    backgroundColor: Colors.light.blue,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  qtyButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontFamily: Fonts.bold,
+  },
+  qtyText: {
+    fontSize: 14,
+    fontFamily: Fonts.medium,
+  },
 });
