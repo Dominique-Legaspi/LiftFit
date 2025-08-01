@@ -1,24 +1,25 @@
 import 'dotenv/config';
 
-export default ({config}) => ({
+export default ({ config }) => ({
   ...config,
   extra: {
-      supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
-      supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
-    },
-  "expo": {
-    "name": "LiftFit",
-    "slug": "LiftFIt",
-    "version": "1.0.0",
-    "orientation": "portrait",
-    "icon": "./assets/logos/icon-512.png",
-    "scheme": "liftfitapp",
-    "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
-    "ios": {
-      "bundleIdentifier": "com.anonymous.liftfitapp",
-      "supportsTablet": true
-    },
+    supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
+    supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
+    STRIPE_PUBLISHABLE_KEY: process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY,
+    API_BASE_URL: process.env.EXPO_PUBLIC_API_BASE_URL
+  },
+  "name": "LiftFit",
+  "slug": "LiftFIt",
+  "version": "1.0.0",
+  "orientation": "portrait",
+  "icon": "./assets/logos/icon-512.png",
+  "scheme": "liftfitapp",
+  "userInterfaceStyle": "automatic",
+  "newArchEnabled": true,
+  "ios": {
+    "bundleIdentifier": "com.anonymous.liftfitapp",
+    "supportsTablet": true
+    ,
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/logos/icon-512.png",

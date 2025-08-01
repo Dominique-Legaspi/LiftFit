@@ -8,6 +8,8 @@ import 'react-native-reanimated';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { UserProvider, useUser } from './context/UserProvider';
 import { useEffect } from 'react';
+import { StripeProvider } from '@stripe/stripe-react-native';
+import { env } from './lib/env';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -30,10 +32,12 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <UserProvider>
-        <SplashController />
-        <RootNavigator />
-      </UserProvider>
+      <StripeProvider publishableKey={env.stripePublishableKey}>
+        <UserProvider>
+          <SplashController />
+          <RootNavigator />
+        </UserProvider>
+      </StripeProvider>
     </ThemeProvider>
   );
 };
