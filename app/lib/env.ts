@@ -5,9 +5,7 @@ type EnvConfig = {
     apiBaseUrl: string;
 };
 
-const extra = Constants.expoConfig?.extra || {};
+const extra = Constants.expoConfig?.extra as EnvConfig;
 
-export const env: EnvConfig = {
-    stripePublishableKey: extra.stripePublishableKey,
-    apiBaseUrl: extra.apiBaseUrl,
-};
+export const STRIPE_PUBLISHABLE_KEY = extra.stripePublishableKey;
+export const API_BASE_URL = extra.apiBaseUrl;

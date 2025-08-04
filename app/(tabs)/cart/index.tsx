@@ -4,10 +4,10 @@ import { Fonts } from '@/constants/Fonts';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Alert, Image, Modal, Pressable, RefreshControl, SafeAreaView, ScrollView, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
-import { useUser } from '../context/UserProvider';
+import { useUser } from '../../context/UserProvider';
 import { useEffect, useState } from 'react';
 import CustomButton from '@/components/ui/CustomButton';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../../lib/supabase';
 import Loading from '@/components/ui/Loading';
 
 type ProductCart = {
@@ -288,7 +288,7 @@ export default function CartScreen() {
             <Text style={[styles.priceText, styles.totalPriceText]}>${totalPrice.toFixed(2)}</Text>
           </View>
 
-          <CustomButton text="Checkout" onPress={() => router.push('/')} />
+          <CustomButton text="Checkout" onPress={() => router.push('/cart/checkout')} />
         </View>
       </ScrollView>
     </SafeAreaView>

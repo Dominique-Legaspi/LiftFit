@@ -9,7 +9,7 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { UserProvider, useUser } from './context/UserProvider';
 import { useEffect } from 'react';
 import { StripeProvider } from '@stripe/stripe-react-native';
-import { env } from './lib/env';
+import { STRIPE_PUBLISHABLE_KEY } from './lib/env';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -32,7 +32,7 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <StripeProvider publishableKey={env.stripePublishableKey}>
+      <StripeProvider publishableKey={STRIPE_PUBLISHABLE_KEY}>
         <UserProvider>
           <SplashController />
           <RootNavigator />
