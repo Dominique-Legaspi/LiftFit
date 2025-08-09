@@ -265,31 +265,37 @@ export default function CartScreen() {
             />
           </View>
         ) : (
-          cartItems.map(item => (
-            <CartItemCard
-              key={item.id}
-              item={item}
-            />
-          ))
+          <>
+            {cartItems.map(item => (
+              <CartItemCard
+                key={item.id}
+                item={item}
+              />
+            ))}
+
+            /* total price */
+            <View style={styles.totalPriceContainer}>
+              <View style={styles.priceRow}>
+                <Text style={[styles.priceText, styles.subtotalText]}>Subtotal</Text>
+                <Text style={[styles.priceText, styles.subtotalText]}>${originalPrice.toFixed(2)}</Text>
+              </View>
+              <View style={styles.priceRow}>
+                <Text style={[styles.priceText, styles.subtotalText]}>Discount</Text>
+                <Text style={[styles.priceText, styles.discountText]}>-${discountPrice.toFixed(2)}</Text>
+              </View>
+              <View style={[styles.priceRow, { marginTop: 4 }]}>
+                <Text style={[styles.priceText, styles.totalPriceText]}>Total</Text>
+                <Text style={[styles.priceText, styles.totalPriceText]}>${totalPrice.toFixed(2)}</Text>
+              </View>
+
+              <CustomButton
+                text="Checkout"
+                onPress={() => router.push('/cart/checkout')}
+                disabled={isEmpty}
+              />
+            </View>
+          </>
         )}
-
-        {/* total price */}
-        <View style={styles.totalPriceContainer}>
-          <View style={styles.priceRow}>
-            <Text style={[styles.priceText, styles.subtotalText]}>Subtotal</Text>
-            <Text style={[styles.priceText, styles.subtotalText]}>${originalPrice.toFixed(2)}</Text>
-          </View>
-          <View style={styles.priceRow}>
-            <Text style={[styles.priceText, styles.subtotalText]}>Discount</Text>
-            <Text style={[styles.priceText, styles.discountText]}>-${discountPrice.toFixed(2)}</Text>
-          </View>
-          <View style={[styles.priceRow, { marginTop: 4 }]}>
-            <Text style={[styles.priceText, styles.totalPriceText]}>Total</Text>
-            <Text style={[styles.priceText, styles.totalPriceText]}>${totalPrice.toFixed(2)}</Text>
-          </View>
-
-          <CustomButton text="Checkout" onPress={() => router.push('/cart/checkout')} />
-        </View>
       </ScrollView>
     </SafeAreaView>
   );

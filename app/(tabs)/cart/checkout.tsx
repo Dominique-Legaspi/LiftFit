@@ -1,11 +1,15 @@
 import { useStripe } from "@stripe/stripe-react-native";
 import { useEffect, useMemo, useState } from "react";
-import { Alert, Button, View } from "react-native";
+import { Alert, FlatList, Image, SafeAreaView, ScrollView, StyleProp, StyleSheet, Text, View, ViewStyle } from "react-native";
 import { API_BASE_URL } from '../../lib/env';
 import Loading from "@/components/ui/Loading";
 import { useRouter } from "expo-router";
 import { useUser } from "@/app/context/UserProvider";
 import { supabase } from "@/app/lib/supabase";
+import TopBar from "@/components/ui/TopBar";
+import { Fonts } from "@/constants/Fonts";
+import { Colors } from "@/constants/Colors";
+import CustomButton from "@/components/ui/CustomButton";
 
 type ProductCart = {
     id: string;
@@ -16,8 +20,20 @@ type ProductCart = {
         price: number;
         discount?: number;
     };
-    product_colors: { id: string; colors: string; };
-    product_stocks: { id: string; size: string };
+    product_colors: {
+        id: string;
+        color: string;
+        image_urls?: string[];
+    };
+    product_stocks: {
+        id: string;
+        size: string
+    };
+}
+
+type CardItemProps = {
+    item: ProductCart;
+    containerStyle?: StyleProp<ViewStyle>;
 }
 
 export default function CheckoutScreen() {
@@ -40,7 +56,7 @@ export default function CheckoutScreen() {
             .select(`
                 *,
                 products(id, name, price, discount),
-                product_colors(id, color),
+                product_colors(id, color, image_urls),
                 product_stocks(id, size)
                 `)
             .eq('profile_id', profileId);
@@ -71,7 +87,7 @@ export default function CheckoutScreen() {
         return {
             subtotal: sub,
             discountAmount: disc,
-            total: sub - disc,
+            total: Math.max(0, sub - disc),
         };
     }, [cartItems]);
 
@@ -95,6 +111,12 @@ export default function CheckoutScreen() {
             body: JSON.stringify({ amount: amountInCents }),
         });
 
+        if (!resp.ok) {
+            setProcessing(false);
+            Alert.alert('Error', 'Could not reach payment server.');
+            return;
+        }
+
         const { clientSecret, error: piError } = await resp.json();
         if (piError || !clientSecret) {
             console.error(piError);
@@ -103,10 +125,31 @@ export default function CheckoutScreen() {
             return;
         };
 
+        const defaultBillingDetails = {
+            name: [ (user as any)?.first_name, (user as any)?.last_name ].filter(Boolean).join(' ') || undefined,
+            email: (user as any)?.email || undefined,
+            phone: undefined,
+            address: {
+                line1: undefined,
+                line2: undefined,
+                city: undefined,
+                state: undefined,
+                postalCode: undefined,
+                country: 'US',
+            },
+        };
+
         // initialize Stripe native sheet
         const { error: initError } = await initPaymentSheet({
             merchantDisplayName: 'LiftFit',
             paymentIntentClientSecret: clientSecret,
+            billingDetailsCollectionConfiguration: {
+                name: 'always',
+                email: 'always',
+                phone: 'automatic',
+                address: 'automatic',
+            } as any,
+            defaultBillingDetails
         });
         if (initError) {
             console.error(initError);
@@ -135,7 +178,7 @@ export default function CheckoutScreen() {
                 .select('id')
                 .single();
 
-            if (orderError || !orderRow?.id ) {
+            if (orderError || !orderRow?.id) {
                 console.error("Order insert error:", orderError);
                 throw orderError;
             }
@@ -170,7 +213,7 @@ export default function CheckoutScreen() {
                 .from('cart_items')
                 .delete()
                 .eq('profile_id', profileId);
-            setCartItems([]);
+            router.replace('/(tabs)/cart');
         }
 
         setProcessing(false);
@@ -180,16 +223,152 @@ export default function CheckoutScreen() {
         return <Loading />
     }
 
+    const OrderSummaryItem: React.FC<CardItemProps> = ({ item, containerStyle }) => {
+        const image_url = item?.product_colors?.image_urls?.[0];
+
+        const price = item.products.price;
+        const discount = item.products.discount ?? 0;
+        const finalPrice = price - price * discount;
+        return (
+            <View style={styles.itemRow}>
+                <Image source={{ uri: image_url }} style={styles.itemImage} />
+                <Text style={styles.itemName}>{item.quantity}x {item.products.name}</Text>
+                <Text style={styles.itemDetail}>
+                    {item.product_colors.color}, {item.product_stocks.size}
+                </Text>
+                <Text style={styles.itemPrice}>
+                    ${(finalPrice * item.quantity).toFixed(2)}
+                </Text>
+            </View>
+        );
+    }
+
+    const isEmpty = cartItems.length === 0;
+
     return (
-        <View style={{ flex: 1, justifyContent: 'center', padding: 24 }}>
-            <Button
-                title="Back"
-                onPress={() => router.back()}
-            />
-            <Button
-                title="Pay $19.99"
-                onPress={handlePay}
-            />
-        </View>
+        <SafeAreaView style={styles.container}>
+            <ScrollView
+                style={styles.scrollViewContainer}
+                contentContainerStyle={{ paddingBottom: 80 }}
+                keyboardShouldPersistTaps="handled"
+            >
+                <TopBar title="Checkout" icon="card-outline" hasBackButton={true} hasSearch={false} hasTopBarIcons={false} />
+
+                <View style={styles.orderSummaryContainer}>
+                    <Text style={styles.sectionTitle}>Order Review</Text>
+
+                    {!isEmpty && cartItems.map(item => (
+                        <OrderSummaryItem
+                            key={item.id}
+                            item={item}
+                        />
+                    ))}
+
+                    <Text style={styles.sectionTitle}>Order Summary</Text>
+                    <View style={styles.summary}>
+                        <View style={styles.summaryRow}>
+                            <Text style={styles.summaryLabel}>Subtotal</Text>
+                            <Text style={styles.summaryValue}>${subtotal.toFixed(2)}</Text>
+                        </View>
+                        <View style={styles.summaryRow}>
+                            <Text style={styles.summaryLabel}>Discount</Text>
+                            <Text style={styles.summaryValue}>-${discountAmount.toFixed(2)}</Text>
+                        </View>
+                        <View style={[styles.summaryRow, styles.totalRow]}>
+                            <Text style={styles.totalLabel}>Total</Text>
+                            <Text style={styles.totalValue}>${total.toFixed(2)}</Text>
+                        </View>
+                    </View>
+
+                    <CustomButton
+                        text={`Place order - $${total.toFixed(2)}`}
+                        onPress={handlePay}
+                        disabled={isEmpty || processing}
+                    />
+                </View>
+            </ScrollView>
+        </SafeAreaView>
     );
 }
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: '#fff',
+    },
+    scrollViewContainer: {
+        paddingVertical: 10,
+    },
+
+    sectionTitle: {
+        fontSize: 16,
+        fontFamily: Fonts.semiBold,
+        paddingVertical: 4,
+        marginTop: 8,
+        marginBottom: 4,
+        borderBottomWidth: 1,
+        borderBottomColor: Colors.light.gray + '33',
+    },
+
+    orderSummaryContainer: {
+        marginHorizontal: 20,
+    },
+
+    cartItemList: {
+        paddingBottom: 16,
+    },
+    itemRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        paddingVertical: 8,
+    },
+    itemImage: {
+        width: 40,
+        height: 60,
+        resizeMode: 'contain',
+    },
+    itemName: {
+        flex: 2,
+        fontFamily: Fonts.medium,
+        paddingHorizontal: 4,
+    },
+    itemDetail: {
+        flex: 1.5,
+        paddingHorizontal: 4,
+        fontFamily: Fonts.regular,
+        color: Colors.light.gray,
+    },
+    itemPrice: {
+        flex: 1,
+        fontFamily: Fonts.medium,
+        textAlign: 'right',
+    },
+
+    summary: {
+        paddingTop: 12,
+    },
+    summaryRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        paddingVertical: 8,
+    },
+    summaryLabel: {
+        fontFamily: Fonts.regular,
+        color: Colors.light.gray,
+    },
+    summaryValue: {
+        fontFamily: Fonts.regular,
+    },
+    totalRow: {
+        marginTop: 4,
+    },
+    totalLabel: {
+        fontFamily: Fonts.bold,
+        fontSize: 18,
+    },
+    totalValue: {
+        fontFamily: Fonts.bold,
+        fontSize: 18,
+        color: Colors.light.blue,
+    },
+})
