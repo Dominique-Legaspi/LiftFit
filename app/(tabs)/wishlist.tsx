@@ -1,12 +1,16 @@
 import SectionHeader from '@/components/ui/SectionHeader';
 import TopBar from '@/components/ui/TopBar';
-import { Alert, RefreshControl, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, RefreshControl, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useUser } from '../context/UserProvider';
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import Loading from '@/components/ui/Loading';
 import { useRouter } from 'expo-router';
 import WishlistCard from '@/components/ui/WishlistCard';
+import { Fonts } from '@/constants/Fonts';
+import { Colors } from '@/constants/Colors';
+import { Ionicons } from '@expo/vector-icons';
+import CustomButton from '@/components/ui/CustomButton';
 
 type ProductWishlist = {
   id: string;
@@ -137,7 +141,16 @@ export default function WishlistScreen() {
             />
           ))
         ) : (
-          <Text style={styles.emptyText}>Your wishlist is empty.</Text>
+          <View style={styles.emptyContainer}>
+            <Ionicons name="heart" size={48} color={Colors.light.blue} />
+            <Text style={styles.emptyText}>
+              Your wishlist is empty.
+            </Text>
+            <CustomButton
+              text="Go Shopping"
+              onPress={() => router.push('/(tabs)/browse')}
+            />
+          </View>
         )}
       </ScrollView>
     </SafeAreaView>
@@ -158,11 +171,29 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     paddingHorizontal: 8,
   },
+
+  // empty cart
+  emptyContainer: {
+    marginTop: 240,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   emptyText: {
-    textAlign: "center",
-    color: "#888",
-    marginVertical: 12,
+    paddingVertical: 8,
+    fontSize: 20,
+    fontFamily: Fonts.medium,
+  },
+  goShoppingButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    marginVertical: 8,
+    borderRadius: 3,
+    backgroundColor: Colors.light.blue,
+  },
+  goShoppingText: {
+    color: '#fff',
     fontSize: 16,
+    fontFamily: Fonts.semiBold,
   },
 
   cardContainer: {

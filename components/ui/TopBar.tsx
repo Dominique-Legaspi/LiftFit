@@ -15,10 +15,11 @@ type TopBarProps = {
     searchContainerStyle?: ViewStyle;
     hasSearch?: boolean;
     hasBackButton?: boolean;
+    hasTopBarIcons?: boolean;
     style?: ViewStyle,
 };
 
-export default function TopBar({ title = 'LIFTFIT', icon, value = '', onChangeText, searchContainerStyle, hasSearch = true, hasBackButton = false, style }: TopBarProps) {
+export default function TopBar({ title = 'LIFTFIT', icon, value = '', onChangeText, searchContainerStyle, hasSearch = true, hasBackButton = false, hasTopBarIcons = true, style }: TopBarProps) {
     const router = useRouter();
 
     const handleBackPress = () => {
@@ -26,8 +27,8 @@ export default function TopBar({ title = 'LIFTFIT', icon, value = '', onChangeTe
     };
 
     const handleChange = (text: string) => {
-    onChangeText?.(text);
-  };
+        onChangeText?.(text);
+    };
 
     return (
         <>
@@ -53,14 +54,19 @@ export default function TopBar({ title = 'LIFTFIT', icon, value = '', onChangeTe
                 )}
 
                 {/* top bar notifications + cart */}
-                <View style={styles.topBarButtonsContainer}>
-                    {/* <Pressable style={styles.topBarButtons}>
+                {hasTopBarIcons && (
+                    <View style={styles.topBarButtonsContainer}>
+                        {/* <Pressable style={styles.topBarButtons}>
                         <Ionicons name="notifications-outline" size={28} />
-                    </Pressable> */}
-                    <Pressable style={styles.topBarButtons}>
-                        <Ionicons name="cart-outline" size={28} />
-                    </Pressable>
-                </View>
+                        </Pressable> */}
+                        <Pressable
+                            style={styles.topBarButtons}
+                            onPress={() => router.push('/(tabs)/cart')}
+                        >
+                            <Ionicons name="cart-outline" size={28} />
+                        </Pressable>
+                    </View>
+                )}
             </View>
 
             {/* search bar - mobile */}

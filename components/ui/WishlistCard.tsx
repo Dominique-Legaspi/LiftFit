@@ -57,7 +57,13 @@ export default function WishlistCard({ item, onDelete }: WishlistCardProps) {
 
     return (
         <Pressable
-            onPress={() => router.push(`/product/${item.product_id}`)}
+            onPress={() => router.push({
+                pathname: `/product/[productId]`,
+                params: {
+                    productId: item.product_id,
+                    productColorId: item.product_color_id,
+                }
+            })}
             style={styles.cardContainer}
         >
             <Image source={{ uri: imageUrl }} style={[styles.cardImage, outOfStock && { opacity: 0.4 }]} />
